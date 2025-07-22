@@ -24,7 +24,7 @@ export default function Index() {
 
           <Button
             mode="contained"
-            onPress={() => router.replace('/(dashboard)/inventory')}  // navigate programmatically
+            onPress={() => router.push('/(dashboard)/inventory')}  // navigate programmatically
             style={styles.loginButton}
             contentStyle={styles.buttonContent}
             labelStyle={styles.buttonText}

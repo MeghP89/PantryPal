@@ -43,9 +43,9 @@ export default function FloatingImagePickerButton() {
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      mediaTypes: ['images'],
+      aspect: [4, 3],
       allowsEditing: true,
-      aspect: [16, 9],
       quality: 1,
     })
 
@@ -63,14 +63,19 @@ export default function FloatingImagePickerButton() {
     }
 
     const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      aspect: [4, 3],
       allowsEditing: true,
-      aspect: [16, 9],
       quality: 1,
     })
 
     if (!result.canceled) {
       setImage(result.assets[0].uri)
       handlePress()
+    }
+
+    if (result.canceled) {
+      alert('You did not select any image.')
     }
   }
 
