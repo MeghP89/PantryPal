@@ -21,6 +21,7 @@ const { width: screenWidth } = Dimensions.get('window')
 export default function FloatingImagePickerButton() {
   const [expanded, setExpanded] = useState(false)
   const [image, setImage] = useState<string | null>(null)
+  const [imageBase64, setImageBase64] = useState<string | null >(null)
   const widgetHeight = useSharedValue(0)
   const opacity = useSharedValue(0)
 
@@ -44,6 +45,7 @@ export default function FloatingImagePickerButton() {
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
+      base64: true,
       aspect: [4, 3],
       allowsEditing: true,
       quality: 1,
@@ -51,6 +53,7 @@ export default function FloatingImagePickerButton() {
 
     if (!result.canceled) {
       setImage(result.assets[0].uri)
+      setImageBase64(result.assets[0].base64 || null)
       handlePress()
     }
   }
@@ -99,7 +102,7 @@ export default function FloatingImagePickerButton() {
         <ImagePreviewCard
           imageUri={image}
           onClear={() => setImage(null)}
-          onUse={() => console.log('using image')}
+          imageBase64={imageBase64}
         />
       )}
 
