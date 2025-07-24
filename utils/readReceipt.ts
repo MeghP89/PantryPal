@@ -1,93 +1,106 @@
-import OpenAI from "openai";
-import { zodResponseFormat } from "openai/helpers/zod";
-import { z } from "zod";
-import dotenv from "dotenv";
-import path from "path";
-import fs from "fs/promises";
+import { GoogleGenAI, Type } from "@google/genai";
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: "AIzaSyAEa_yhtmAibFNwU5hViphAmbV8FPNo6d0",
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
-});
+const API_KEY = "AIzaSyAEa_yhtmAibFNwU5hViphAmbV8FPNo6d0"
 
-// Define schema for nutritional information
-const NutritionalItem = z.object({
-  name: z.string(), // Item name (e.g., "apple" or "2% skim milk")
-  calories: z.number().gte(0), // Calories per serving (kcal)
-  servingSize: z.string(), // Serving size (e.g., "100g", "1 cup")
-  totalFat: z.number().gte(0), // Total fat in grams
-  protein: z.number().gte(0), // Protein in grams
-  carbohydrates: z.number().gte(0), // Total carbohydrates in grams
-  category: z.enum([
-    "Produce",
-    "Dairy",
-    "Meat",
-    "Bakery",
-    "Frozen",
-    "Beverages",
-    "Snacks",
-    "Canned Goods",
-    "Condiments",
-    "Grains",
-    "Seasonings",
-    "Misc"
-  ])
-});
+export async function extractNutritionalInfoFromLabel(imageBase64: string) {
+  console.log("in the function")
+  const ai = new GoogleGenAI({ apiKey: "AIzaSyAEa_yhtmAibFNwU5hViphAmbV8FPNo6d0" });
 
-const NutritionalList = z.array(NutritionalItem);
-
-export async function extractNutritionalInfoFromLabel(base64Image: string) {
-  try {
-    const messages = [
-      {
-        role: "system",
-        content: "Extract nutritional information from a nutritional label image or identify produce items and provide basic nutritional information."
-      },
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `
-              Extract nutritional information from the provided image. For packaged items, parse the nutritional label to extract the item name, calories, serving size, total fat, protein, and carbohydrates. Do not include brand names, and group similar items (e.g., tomatoes from different brands as "tomatoes"). For produce items without a label, identify the item and provide basic nutritional information based on standard values for a typical serving size (e.g., 100g for produce). Categorize each item into one of the following: Produce, Dairy, Meat, Bakery, Frozen, Beverages, Snacks, Canned Goods, Condiments, Grains, Seasonings, Misc. Return a JSON array of objects with the fields: name (string), calories (number), servingSize (string), totalFat (number), protein (number), carbohydrates (number), and category (enum).
-            `
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:image/jpeg;base64,${base64Image}`
-            }
-          }
-        ]
+  const contents = [
+    {
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: imageBase64
       }
-    ];
-
-    const completion = await openai.chat.completions.parse({
-      model: "gemini-2.0-flash",
-      messages,
-      response_format: zodResponseFormat(NutritionalList, "nutritionalList")
-    });
-
-    const parsedItems = completion.choices[0].message.parsed;
-    let formattedItems;
-    if (parsedItems) {
-      formattedItems = parsedItems.map(item => ({
-        ...item,
-        calories: Number(item.calories.toFixed(0)), // Round to whole number
-        totalFat: Number(item.totalFat.toFixed(1)), // Round to 1 decimal
-        protein: Number(item.protein.toFixed(1)), // Round to 1 decimal
-        carbohydrates: Number(item.carbohydrates.toFixed(1)) // Round to 1 decimal
-      }));
-    } else {
-      throw new Error("No nutritional information extracted from the image.");
+    },
+    {
+      text: `
+        Extract nutritional information from the provided image.
+        - Identify produce items or read nutritional labels.
+        - Return a structured JSON object wrapped in "NutritionalItem" with:
+          - itemName (string)
+          - ServingUnit (string)
+          - NumberOfServings (integer)
+          - TotalServings (integer)
+          - ItemCategory (enum)
+          - NutritionalInfo: array of objects with:
+            - NutrientName (string)
+            - NutrientAmount (number)
+            - NutrientUnit (string)
+      `
     }
+  ];
 
-    console.log("Parsed nutritional items:", formattedItems);
-    return formattedItems;
-
-  } catch (error) {
-    console.error("Error extracting nutritional information:", error);
-    throw error;
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          NutritionalItem: {
+            type: Type.OBJECT,
+            properties: {
+              itemName: { type: Type.STRING },
+              ServingUnit: { type: Type.STRING },
+              NumberOfServings: { type: Type.INTEGER },
+              TotalServings: { type: Type.INTEGER },
+              ItemCategory: {
+                type: Type.STRING,
+                enum: [
+                  "Produce",
+                  "Dairy",
+                  "Meat",
+                  "Bakery",
+                  "Frozen",
+                  "Beverages",
+                  "Snacks",
+                  "Canned Goods",
+                  "Condiments",
+                  "Grains",
+                  "Seasonings",
+                  "Misc"
+                ]
+              },
+              CaloriesPerServing: { type: Type.INTEGER },
+              CalorieUnit: { type: Type.STRING },
+              NutritionalInfo: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    NutrientName: { type: Type.STRING },
+                    NutrientAmount: { type: Type.NUMBER },
+                    NutrientUnit: { type: Type.STRING }
+                  },
+                  propertyOrdering: [
+                    "NutrientName",
+                    "NutrientAmount",
+                    "NutrientUnit"
+                  ]
+                }
+              },
+            },
+            propertyOrdering: [
+              "itemName",
+              "ServingUnit",
+              "NumberOfServings",
+              "TotalServings",
+              "CaloriesPerServing",
+              "CalorieUnit",
+              "ItemCategory",
+              "NutritionalInfo"
+            ]
+          }
+        },
+        propertyOrdering: ["NutritionalItem"]
+      }
+    }
+  });
+  if (!response.text) {
+    throw new Error("No response text returned from API");
   }
+  console.log(response.text)
+  return JSON.parse(response.text);
 }

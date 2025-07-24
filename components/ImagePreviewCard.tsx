@@ -11,8 +11,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
-import { supabase } from '../utils/supabase'
 import { extractNutritionalInfoFromLabel } from '../utils/readReceipt' 
+import EditItemModal from './EditItem'
 
 const { width: screenWidth } = Dimensions.get('window')
 
@@ -23,15 +23,34 @@ interface ImagePreviewPopupProps {
   onClear: () => void
 }
 
-interface NutritionalItem {
-  name: string, // Item name (e.g., "apple" or "2% skim milk")
-  calories: number, // Calories per serving (kcal)
-  servingSize: string, // Serving size (e.g., "100g", "1 cup")
-  totalFat: number, // Total fat in grams
-  protein: number, // Protein in grams
-  carbohydrates: number, // Total carbohydrates in grams
-  category: string,
-  quantity: number
+type ResponseSchema = {
+  NutritionalItem: {
+    itemName: string;
+    ServingUnit: string;
+    NumberOfServings: number;
+    TotalServings: number;
+    ItemCategory:
+      | "Produce"
+      | "Dairy"
+      | "Meat"
+      | "Bakery"
+      | "Frozen"
+      | "Beverages"
+      | "Snacks"
+      | "Canned Goods"
+      | "Condiments"
+      | "Grains"
+      | "Seasonings"
+      | "Misc";
+    CaloriesPerServing: number;
+    CalorieUnit: string;
+    NutritionalInfo: {
+      NutrientName: string;
+      NutrientAmount: number;
+      NutrientUnit: string;
+    }[];
+    ItemQuantity: number;
+  };
 };
 
 export default function ImagePreviewPopup({
@@ -40,42 +59,46 @@ export default function ImagePreviewPopup({
   onClear,
   imageBase64,
 }: ImagePreviewPopupProps) {
-  const [item, setItem] = useState<NutritionalItem | null>(null)
+  const [nutrientItem, setNutrientItem] = useState<ResponseSchema | null>(null)
 
   const onUse = async (imageBase64: string | null) => {
     if(imageBase64) {
-      const parsedItems = await extractNutritionalInfoFromLabel(imageBase64)
-      if (parsedItems && parsedItems.length > 0) {
-        const firstItem = {
-          ...parsedItems[0],
-          quantity: 1,
-        }
-        setItem(firstItem)
-      }
+      console.log('pressed me')
+      const parsedItem = await extractNutritionalInfoFromLabel(imageBase64)
+      if (parsedItem)
+        console.log(parsedItem.NutritionalItem.itemName)
+        parsedItem.NutritionalItem.ItemQuantity = 1
+        setNutrientItem(parsedItem)
     } else {
       Alert.alert('ImageBase64 is null')
     }
   }
   return (
-    
-      <Modal visible={visible} animationType="fade" transparent>
-        {/* Blur background */}
-        <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+    <>
+      {nutrientItem != null ? (
+        <EditItemModal itemData={nutrientItem} onClear={onClear}/>
+      )
+        :
+        (<Modal visible={visible} animationType="fade" transparent>
+          {/* Blur background */}
+          <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
 
-        <View style={styles.centeredView}>
-          <View style={styles.card}>
-            <Pressable style={styles.closeButton} onPress={onClear}>
-              <Ionicons name="close" size={20} color="#1B5E20" />
-            </Pressable>
+          <View style={styles.centeredView}>
+            <View style={styles.card}>
+              <Pressable style={styles.closeButton} onPress={onClear}>
+                <Ionicons name="close" size={20} color="#1B5E20" />
+              </Pressable>
 
-            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+              <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
 
-            <Pressable style={styles.useButton} onPress={async () => onUse(imageBase64)}>
-              <Text style={styles.useButtonText}>Use This Image</Text>
-            </Pressable>
+              <Pressable style={styles.useButton} onPress={async () => onUse(imageBase64)}>
+                <Text style={styles.useButtonText}>Use This Image</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>)
+      }
+    </>
   )
 }
 
