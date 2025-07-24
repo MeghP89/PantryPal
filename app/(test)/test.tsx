@@ -17,7 +17,6 @@ import {
 } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../utils/supabase";
-import FloatingImagePickerButton from "@/components/FloatingImagePickerButton";
 
 type NutritionalItem = {
   id: string;
@@ -292,7 +291,12 @@ export default function NutritionalItemsScreen() {
         </ScrollView>
 
         {/* Floating Action Button */}
-        <FloatingImagePickerButton />
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          onPress={() => console.log("Add new item")}
+          color="#ffffff"
+        />
       </LinearGradient>
     </SafeAreaView>
   );

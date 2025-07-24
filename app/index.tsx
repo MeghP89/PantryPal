@@ -41,6 +41,16 @@ export default function Index() {
           >
             Login
           </Button>
+
+          <Button
+            mode="outlined"
+            onPress={() => router.push('/(test)/test')}  // navigate programmatically
+            style={styles.signupButton}
+            contentStyle={styles.buttonContent}
+            labelStyle={[styles.buttonText, styles.signupButtonText]}
+          >
+            test
+          </Button>
         </View>
       </View>
     </View>

@@ -67,6 +67,7 @@ export default function FloatingImagePickerButton() {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
+      base64: true,
       aspect: [4, 3],
       allowsEditing: true,
       quality: 1,
@@ -74,6 +75,7 @@ export default function FloatingImagePickerButton() {
 
     if (!result.canceled) {
       setImage(result.assets[0].uri)
+      setImageBase64(result.assets[0].base64 || null)
       handlePress()
     }
 
