@@ -24,7 +24,7 @@ type NutritionalItem = {
     id: string;
     itemName: string;
     ServingUnit: string;
-    NumberOfServings: number;
+    AmountPerServing: number;
     TotalServings: number;
     ItemCategory:
       | "Produce"
@@ -101,7 +101,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
       const itemToSave = {
         item_name: item.itemName,
         serving_unit: item.ServingUnit,
-        number_of_servings: item.NumberOfServings,
+        amount_per_serving: item.AmountPerServing,
         total_servings: item.TotalServings,
         calories_per_serving: item.CaloriesPerServing,
         calorie_unit: item.CalorieUnit,
@@ -152,6 +152,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
         }
       }
     } catch (error) {
+      setLoading(false);
       console.error("Error saving item:", error);
     } finally {
       console.log("Saved item:", item);
@@ -224,15 +225,15 @@ export default function EditItemModal({ itemData, onClear }: Props) {
                 {/* Serving Info */}
                 <View style={styles.row}>
                   <View style={styles.halfWidth}>
-                    <Text style={styles.label}>Servings</Text>
+                    <Text style={styles.label}>Serving Size</Text>
                     <TextInput
                       mode="outlined"
                       keyboardType="numeric"
-                      value={(item.NumberOfServings ?? 0).toString()}
+                      value={(item.AmountPerServing ?? 0).toString()}
                       onChangeText={(text) =>
                         setItem({
                           ...item,
-                          NumberOfServings: parseFloat(text) || 0,
+                          AmountPerServing: parseFloat(text) || 0,
                         })
                       }
                       style={styles.smallInput}

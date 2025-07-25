@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { extractNutritionalInfoFromLabel } from '../utils/readReceipt';
-import InsertItemModal from './InsertItem';
+import InsertItemModal from './InsertItemModal';
 import LoadingComponent from './LoadingComponent';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -27,7 +27,7 @@ type ResponseSchema = {
   NutritionalItem: {
     itemName: string;
     ServingUnit: string;
-    NumberOfServings: number;
+    AmountPerServing: number;
     TotalServings: number;
     ItemCategory:
       | 'Produce'

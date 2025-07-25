@@ -20,7 +20,7 @@ export async function extractNutritionalInfoFromLabel(imageBase64: string) {
         - Return a structured JSON object wrapped in "NutritionalItem" with:
           - itemName (string)
           - ServingUnit (string)
-          - NumberOfServings (integer/float)
+          - AmountPerServing (integer/float)
           - TotalServings (integer/float)
           - ItemCategory (enum)
           - NutritionalInfo: array of objects with:
@@ -44,7 +44,7 @@ export async function extractNutritionalInfoFromLabel(imageBase64: string) {
             properties: {
               itemName: { type: Type.STRING },
               ServingUnit: { type: Type.STRING },
-              NumberOfServings: { type: Type.NUMBER },
+              AmountPerServing: { type: Type.NUMBER },
               TotalServings: { type: Type.NUMBER },
               ItemCategory: {
                 type: Type.STRING,
@@ -85,7 +85,7 @@ export async function extractNutritionalInfoFromLabel(imageBase64: string) {
             propertyOrdering: [
               "itemName",
               "ServingUnit",
-              "NumberOfServings",
+              "AmountPerServing",
               "TotalServings",
               "CaloriesPerServing",
               "CalorieUnit",
