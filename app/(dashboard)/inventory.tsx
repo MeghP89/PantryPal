@@ -5,6 +5,10 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
 } from "react-native";
 import {
   Text,
@@ -13,9 +17,9 @@ import {
   IconButton,
   Chip,
   Searchbar,
-  FAB,
 } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
+
 import { supabase } from "../../utils/supabase";
 import FloatingImagePickerButton from "@/components/FloatingImagePickerButton";
 import EditItemModal from "@/components/EditItemModal";
@@ -243,74 +247,81 @@ export default function NutritionalItemsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={["#e8f5e8", "#f1f8e9"]}
-        style={styles.backgroundGradient}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Nutritional Items</Text>
-          <Text style={styles.headerSubtitle}>
-            {filteredItems.length} items found
-          </Text>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Searchbar
-            placeholder="Search items..."
-            onChangeText={setSearchQuery}
-            value={searchQuery}
-            style={styles.searchBar}
-            iconColor="#1b5e20"
-            inputStyle={styles.searchInput}
-          />
-        </View>
-
-        {/* Category Filter */}
-        <View style={styles.categorySection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryContent}
-          >
-            {categories.map((category) => (
-              <Chip
-                key={category}
-                compact
-                selected={
-                  selectedCategory === category ||
-                  (category === "All" && !selectedCategory)
-                }
-                onPress={() =>
-                  setSelectedCategory(category === "All" ? null : category)
-                }
-                style={[
-                  styles.filterChip,
-                  (selectedCategory === category ||
-                    (category === "All" && !selectedCategory)) &&
-                    styles.selectedFilterChip,
-                ]}
-                textStyle={styles.filterChipText}
-              >
-                {category}
-              </Chip>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Items List */}
-        <ScrollView
-          style={styles.itemsList}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.itemsContent}
+        <LinearGradient
+          colors={["#e8f5e8", "#f1f8e9"]}
+          style={styles.backgroundGradient}
         >
-          {filteredItems.map(renderItemCard)}
-        </ScrollView>
+          {/* Header */}
+          <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Nutritional Items</Text>
+              <Text style={styles.headerSubtitle}>
+                {filteredItems.length} items found
+              </Text>
+            </View>
+          </TouchableWithoutFeedback>
 
-        {/* Floating Action Button */}
-        <FloatingImagePickerButton />
-      </LinearGradient>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Searchbar
+              placeholder="Search items..."
+              onChangeText={setSearchQuery}
+              value={searchQuery}
+              style={styles.searchBar}
+              iconColor="#1b5e20"
+              inputStyle={styles.searchInput}
+            />
+          </View>
+
+          {/* Category Filter */}
+          <View style={styles.categorySection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryContent}
+            >
+              {categories.map((category) => (
+                <Chip
+                  key={category}
+                  compact
+                  selected={
+                    selectedCategory === category ||
+                    (category === "All" && !selectedCategory)
+                  }
+                  onPress={() =>
+                    setSelectedCategory(category === "All" ? null : category)
+                  }
+                  style={[
+                    styles.filterChip,
+                    (selectedCategory === category ||
+                      (category === "All" && !selectedCategory)) &&
+                      styles.selectedFilterChip,
+                  ]}
+                  textStyle={styles.filterChipText}
+                >
+                  {category}
+                </Chip>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Items List */}
+          <ScrollView
+            style={styles.itemsList}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.itemsContent}
+          >
+            {filteredItems.map(renderItemCard)}
+          </ScrollView>
+
+          {/* Floating Action Button */}
+          <FloatingImagePickerButton />
+        </LinearGradient>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -462,11 +473,5 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
     overflow: "hidden",
-  },
-  fab: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "#4CAF50",
   },
 });
