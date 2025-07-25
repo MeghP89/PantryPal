@@ -19,6 +19,7 @@ import {
 } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/utils/supabase";
+import CheckItemSimilarity from "./checkItemSimilarity";
 
 type ResponseSchema = {
   NutritionalItem: {
@@ -63,6 +64,11 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
   const [modalVisible, setModalVisible] = useState(true);
   const [item, setItem] = useState<ResponseSchema>(itemData);
   const [loading, setLoading] = useState(false);
+  const [itemSimilarName, setItemSimilarName] = useState<string | null>(null)
+  const [itemSimilarId, setItemSimilarId] = useState<string | null>(null)
+  const [itemSimilarQuantity, setItemSimilarQuantity] = useState<number>(0)
+  const [itemSimilarityVisible, setItemSimilarityVisible] = useState(false)
+
 
   const theme = useTheme();
 
@@ -104,6 +110,91 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
     });
   };
 
+  const updateSimilarItem = async (itemSimilarId: string | null) => {
+    try {
+      if(!itemSimilarId) return
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session?.user?.id) {
+          console.error("Session error or user not found:", sessionError);
+          return;
+        }
+      const user_id = session?.user.id
+      const { error } = await supabase
+        .from("nutritional_items")
+        .update({ item_quantity: item.NutritionalItem.ItemQuantity + itemSimilarQuantity })
+        .eq("itemid", itemSimilarId)
+        .eq("userid", user_id);
+
+      if (error) {
+        console.error("Failed to update item_quantity:", error);
+      } else {
+        console.log("item_quantity updated successfully.");
+      }
+    } catch (error) {
+      setLoading(false)
+      console.error("Error saving item:", error);
+    } finally {
+      setLoading(false);
+      setModalVisible(false);
+      setItemSimilarityVisible(false)
+      onClear()
+    }
+  };
+
+  const saveItem = async () => {
+    setLoading(true);
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session?.user?.id) {
+          console.error("Session error or user not found:", sessionError);
+          return;
+        }
+      const user_id = session?.user.id
+      const itemToSave = {
+          userid: user_id,
+          item_name: item.NutritionalItem.itemName,
+          serving_unit: item.NutritionalItem.ServingUnit,
+          amount_per_serving: item.NutritionalItem.AmountPerServing,
+          total_servings: item.NutritionalItem.TotalServings,
+          calories_per_serving: item.NutritionalItem.CaloriesPerServing,
+          calorie_unit: item.NutritionalItem.CalorieUnit,
+          item_category: item.NutritionalItem.ItemCategory,
+          item_quantity: item.NutritionalItem.ItemQuantity,
+        };
+
+        const { data, error } = await supabase
+          .from('nutritional_items')
+          .insert([
+            itemToSave
+          ])
+          .select()
+        if (error) {
+          console.error("Insert failed:", error);
+        } else if (data) {
+          console.log(data)
+          const item_id = data?.[0]?.itemid;
+          for(const nutrient of item.NutritionalItem.NutritionalInfo) {
+            const { error } = await supabase
+                .from('nutritional_info')
+                .insert([
+                { item_id: item_id, nutrient_name: nutrient.NutrientName, nutrient_amount: nutrient.NutrientAmount, nutrient_unit: nutrient.NutrientUnit }
+                ])
+                .select()
+          }    
+              
+          console.log("Inserted ID:", item_id)
+        }
+    } catch (error) {
+      setLoading(false)
+      console.error("Error saving item:", error);
+    } finally {
+      setLoading(false);
+      setModalVisible(false);
+      setItemSimilarityVisible(false)
+      onClear()
+    }
+  }
+
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -112,49 +203,29 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
         console.error("Session error or user not found:", sessionError);
         return;
       }
-      const user_id = session?.user.id
-      const itemToSave = {
-        userid: user_id,
-        item_name: item.NutritionalItem.itemName,
-        serving_unit: item.NutritionalItem.ServingUnit,
-        amount_per_serving: item.NutritionalItem.AmountPerServing,
-        total_servings: item.NutritionalItem.TotalServings,
-        calories_per_serving: item.NutritionalItem.CaloriesPerServing,
-        calorie_unit: item.NutritionalItem.CalorieUnit,
-        item_category: item.NutritionalItem.ItemCategory,
-        item_quantity: item.NutritionalItem.ItemQuantity,
-      };
 
-      const { data, error } = await supabase
-        .from('nutritional_items')
-        .insert([
-          itemToSave
-        ])
-        .select()
-      if (error) {
-        console.error("Insert failed:", error);
-      } else if (data) {
-        console.log(data)
-        const item_id = data?.[0]?.itemid;
-        for(const nutrient of item.NutritionalItem.NutritionalInfo) {
-          const { error } = await supabase
-              .from('nutritional_info')
-              .insert([
-              { item_id: item_id, nutrient_name: nutrient.NutrientName, nutrient_amount: nutrient.NutrientAmount, nutrient_unit: nutrient.NutrientUnit }
-              ])
-              .select()
-        }    
-            
-        console.log("Inserted ID:", item_id);
+      const user_id = session?.user.id;
+
+      const { data: existingItems, error } = await supabase
+        .from("nutritional_items")
+        .select("*")
+        .eq("userid", user_id)
+        .ilike("item_name", `%${item.NutritionalItem.itemName}%`);
+
+      if (!error && existingItems?.length > 0) {
+        console.log("Found Existing Item")
+        const existingItem = existingItems[0];
+        setItemSimilarName(existingItem.item_name);
+        setItemSimilarId(existingItem.itemid);
+        setItemSimilarQuantity(existingItem.item_quantity);
+        setItemSimilarityVisible(true);
+      } else {
+        await saveItem(); // no similar item
       }
     } catch (error) {
-      setLoading(false);
       console.error("Error saving item:", error);
     } finally {
-      console.log("Saved item:", item);
       setLoading(false);
-      setModalVisible(false);
-      onClear()
     }
   };
 
@@ -163,199 +234,206 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
     onClear();
   };
 
-  return (
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.keyboardView}
-          >
-            <Card style={styles.modal}>
-              <LinearGradient
-                colors={[theme.colors.surface, theme.colors.surfaceVariant]}
-                style={styles.header}
-              >
-                <Text style={styles.headerTitle}>Edit Item</Text>
-                <IconButton icon="close" onPress={handleCancel} />
-              </LinearGradient>
+  return (itemSimilarityVisible) ?
+        (<CheckItemSimilarity
+          visible={itemSimilarityVisible}
+          newItemName={item.NutritionalItem.itemName}
+          existingItemName={itemSimilarName}
+          onConfirm={async () => await updateSimilarItem(itemSimilarId)}
+          onCancel={async () => await saveItem()}
+          />)
+        : (<Modal visible={modalVisible} animationType="slide" transparent>
+          <View style={styles.overlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.keyboardView}
+            >
+              <Card style={styles.modal}>
+                <LinearGradient
+                  colors={[theme.colors.surface, theme.colors.surfaceVariant]}
+                  style={styles.header}
+                >
+                  <Text style={styles.headerTitle}>Edit Item</Text>
+                  <IconButton icon="close" onPress={handleCancel} />
+                </LinearGradient>
 
-              <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Item Name */}
-                <View style={styles.section}>
-                  <Text style={styles.label}>Item Name</Text>
-                  <TextInput
-                    mode="outlined"
-                    value={item.NutritionalItem.itemName}
-                    onChangeText={(text) =>
-                      setItem({
-                        ...item,
-                        NutritionalItem: { ...item.NutritionalItem, itemName: text }
-                      })
-                    }
-                    style={styles.input}
-                  />
-                </View>
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                  {/* Item Name */}
+                  <View style={styles.section}>
+                    <Text style={styles.label}>Item Name</Text>
+                    <TextInput
+                      mode="outlined"
+                      value={item.NutritionalItem.itemName}
+                      onChangeText={(text) =>
+                        setItem({
+                          ...item,
+                          NutritionalItem: { ...item.NutritionalItem, itemName: text }
+                        })
+                      }
+                      style={styles.input}
+                    />
+                  </View>
 
-                {/* Category Selection */}
-                <View style={styles.section}>
-                  <Text style={styles.label}>Category</Text>
-                  <View style={styles.chipContainer}>
-                    {categories.map((category) => (
-                      <Chip
-                        key={category}
-                        selected={item.NutritionalItem.ItemCategory === category}
-                        onPress={() =>
+                  {/* Category Selection */}
+                  <View style={styles.section}>
+                    <Text style={styles.label}>Category</Text>
+                    <View style={styles.chipContainer}>
+                      {categories.map((category) => (
+                        <Chip
+                          key={category}
+                          selected={item.NutritionalItem.ItemCategory === category}
+                          onPress={() =>
+                            setItem({
+                              ...item,
+                              NutritionalItem: { 
+                                ...item.NutritionalItem, 
+                                ItemCategory: category as any 
+                              }
+                            })
+                          }
+                          style={styles.chip}
+                        >
+                          {category}
+                        </Chip>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Serving Info */}
+                  <View style={styles.row}>
+                    <View style={styles.halfWidth}>
+                      <Text style={styles.label}>Serving Size</Text>
+                      <TextInput
+                        mode="outlined"
+                        keyboardType="numeric"
+                        value={(item.NutritionalItem.AmountPerServing ?? 0).toString()}
+                        onChangeText={(text) =>
                           setItem({
                             ...item,
-                            NutritionalItem: { 
-                              ...item.NutritionalItem, 
-                              ItemCategory: category as any 
-                            }
+                            NutritionalItem: {
+                              ...item.NutritionalItem,
+                              AmountPerServing: parseFloat(text) || 0,
+                            },
                           })
                         }
-                        style={styles.chip}
-                      >
-                        {category}
-                      </Chip>
-                    ))}
+                        style={styles.smallInput}
+                      />
+                    </View>
+                    <View style={styles.halfWidth}>
+                      <Text style={styles.label}>Unit</Text>
+                      <TextInput
+                        mode="outlined"
+                        value={item.NutritionalItem.ServingUnit}
+                        onChangeText={(text) =>
+                          setItem({
+                            ...item,
+                            NutritionalItem: { ...item.NutritionalItem, ServingUnit: text }
+                          })
+                        }
+                        style={styles.smallInput}
+                      />
+                    </View>
                   </View>
-                </View>
 
-                {/* Serving Info */}
-                <View style={styles.row}>
-                  <View style={styles.halfWidth}>
-                    <Text style={styles.label}>Serving Size</Text>
+                  {/* Quantity */}
+                  <View style={styles.section}>
+                    <Text style={styles.label}>Quantity</Text>
                     <TextInput
                       mode="outlined"
                       keyboardType="numeric"
-                      value={(item.NutritionalItem.AmountPerServing ?? 0).toString()}
+                      value={(item.NutritionalItem.ItemQuantity ?? 0).toString()}
+                      onChangeText={(text) => 
+                        setItem((prev) => ({
+                          ...prev,
+                          NutritionalItem: {
+                              ...prev.NutritionalItem,
+                              ItemQuantity: parseInt(text) || 0,
+                          },
+                          }))
+                      }
+                      style={styles.quantityInput}
+                    />
+                  </View>
+
+                  {/* Calories */}
+                  <View style={styles.section}>
+                    <Text style={styles.label}>Calories per Serving</Text>
+                    <TextInput
+                      mode="outlined"
+                      keyboardType="numeric"
+                      value={(item.NutritionalItem.CaloriesPerServing ?? 0).toString()}
                       onChangeText={(text) =>
                         setItem({
                           ...item,
                           NutritionalItem: {
                             ...item.NutritionalItem,
-                            AmountPerServing: parseFloat(text) || 0,
+                            CaloriesPerServing: parseFloat(text) || 0,
                           },
                         })
                       }
-                      style={styles.smallInput}
+                      style={styles.input}
                     />
                   </View>
-                  <View style={styles.halfWidth}>
-                    <Text style={styles.label}>Unit</Text>
-                    <TextInput
-                      mode="outlined"
-                      value={item.NutritionalItem.ServingUnit}
-                      onChangeText={(text) =>
-                        setItem({
-                          ...item,
-                          NutritionalItem: { ...item.NutritionalItem, ServingUnit: text }
-                        })
-                      }
-                      style={styles.smallInput}
-                    />
+
+                  {/* Nutritional Info */}
+                  <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.label}>Nutritional Information</Text>
+                      <IconButton icon="plus" onPress={addNutrient} size={20} />
+                    </View>
+
+                    {item.NutritionalItem.NutritionalInfo.map((nutrient, index) => (
+                      <Card key={index} style={styles.nutrientCard}>
+                        <Card.Content style={styles.nutrientContent}>
+                          <TextInput
+                            mode="outlined"
+                            placeholder="Nutrient name"
+                            value={nutrient.NutrientName}
+                            onChangeText={(text) => updateNutrient(index, "NutrientName", text)}
+                            style={styles.nutrientNameInput}
+                          />
+                          <TextInput
+                            mode="outlined"
+                            placeholder="Amount"
+                            keyboardType="numeric"
+                            value={(nutrient.NutrientAmount ?? 0).toString()}
+                            onChangeText={(text) =>
+                              updateNutrient(index, "NutrientAmount", parseFloat(text) || 0)
+                            }
+                            style={styles.nutrientAmountInput}
+                          />
+                          <TextInput
+                            mode="outlined"
+                            placeholder="Unit"
+                            value={nutrient.NutrientUnit}
+                            onChangeText={(text) => updateNutrient(index, "NutrientUnit", text)}
+                            style={styles.nutrientUnitInput}
+                          />
+                          <IconButton
+                            icon="delete"
+                            onPress={() => removeNutrient(index)}
+                            size={20}
+                          />
+                        </Card.Content>
+                      </Card>
+                    ))}
                   </View>
+                </ScrollView>
+
+                {/* Action Buttons */}
+                <View style={styles.actions}>
+                  <Button mode="outlined" onPress={handleCancel} style={styles.button}>
+                    Cancel
+                  </Button>
+                  <Button mode="contained" loading={loading} onPress={handleSave} style={styles.button}>
+                    Save
+                  </Button>
                 </View>
-
-                {/* Quantity */}
-                <View style={styles.section}>
-                  <Text style={styles.label}>Quantity</Text>
-                  <TextInput
-                    mode="outlined"
-                    keyboardType="numeric"
-                    value={(item.NutritionalItem.ItemQuantity ?? 0).toString()}
-                    onChangeText={(text) => 
-                      setItem((prev) => ({
-                        ...prev,
-                        NutritionalItem: {
-                            ...prev.NutritionalItem,
-                            ItemQuantity: parseInt(text) || 0,
-                        },
-                        }))
-                    }
-                    style={styles.quantityInput}
-                  />
-                </View>
-
-                {/* Calories */}
-                <View style={styles.section}>
-                  <Text style={styles.label}>Calories per Serving</Text>
-                  <TextInput
-                    mode="outlined"
-                    keyboardType="numeric"
-                    value={(item.NutritionalItem.CaloriesPerServing ?? 0).toString()}
-                    onChangeText={(text) =>
-                      setItem({
-                        ...item,
-                        NutritionalItem: {
-                          ...item.NutritionalItem,
-                          CaloriesPerServing: parseFloat(text) || 0,
-                        },
-                      })
-                    }
-                    style={styles.input}
-                  />
-                </View>
-
-                {/* Nutritional Info */}
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.label}>Nutritional Information</Text>
-                    <IconButton icon="plus" onPress={addNutrient} size={20} />
-                  </View>
-
-                  {item.NutritionalItem.NutritionalInfo.map((nutrient, index) => (
-                    <Card key={index} style={styles.nutrientCard}>
-                      <Card.Content style={styles.nutrientContent}>
-                        <TextInput
-                          mode="outlined"
-                          placeholder="Nutrient name"
-                          value={nutrient.NutrientName}
-                          onChangeText={(text) => updateNutrient(index, "NutrientName", text)}
-                          style={styles.nutrientNameInput}
-                        />
-                        <TextInput
-                          mode="outlined"
-                          placeholder="Amount"
-                          keyboardType="numeric"
-                          value={(nutrient.NutrientAmount ?? 0).toString()}
-                          onChangeText={(text) =>
-                            updateNutrient(index, "NutrientAmount", parseFloat(text) || 0)
-                          }
-                          style={styles.nutrientAmountInput}
-                        />
-                        <TextInput
-                          mode="outlined"
-                          placeholder="Unit"
-                          value={nutrient.NutrientUnit}
-                          onChangeText={(text) => updateNutrient(index, "NutrientUnit", text)}
-                          style={styles.nutrientUnitInput}
-                        />
-                        <IconButton
-                          icon="delete"
-                          onPress={() => removeNutrient(index)}
-                          size={20}
-                        />
-                      </Card.Content>
-                    </Card>
-                  ))}
-                </View>
-              </ScrollView>
-
-              {/* Action Buttons */}
-              <View style={styles.actions}>
-                <Button mode="outlined" onPress={handleCancel} style={styles.button}>
-                  Cancel
-                </Button>
-                <Button mode="contained" loading={loading} onPress={handleSave} style={styles.button}>
-                  Save
-                </Button>
-              </View>
-            </Card>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
-  );
+              </Card>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
+  )
 }
 
 const styles = StyleSheet.create({
