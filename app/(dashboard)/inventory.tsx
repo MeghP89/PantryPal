@@ -18,6 +18,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../utils/supabase";
 import FloatingImagePickerButton from "@/components/FloatingImagePickerButton";
+import EditItemModal from "@/components/EditItemModal";
 
 type NutritionalItem = {
   id: string;
@@ -68,6 +69,7 @@ const getCategoryColor = (category: string) => {
 
 export default function NutritionalItemsScreen() {
   const [items, setItems] = useState<NutritionalItem[]>([]);
+  const [edit, setEdit] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     null
@@ -143,6 +145,10 @@ export default function NutritionalItemsScreen() {
     "Misc",
   ];
 
+  const onEdit = (id: string | null) => {
+    setEdit(id);
+  }
+
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.itemName
       .toLowerCase()
@@ -189,7 +195,7 @@ export default function NutritionalItemsScreen() {
               <IconButton
                 icon="pencil"
                 size={20}
-                onPress={() => console.log("Edit item:", item.id)}
+                onPress={() => onEdit(item.id)}
               />
             </View>
 
@@ -221,6 +227,9 @@ export default function NutritionalItemsScreen() {
           </Card.Content>
         </LinearGradient>
       </Card>
+      {edit === item.id && (
+        <EditItemModal itemData={item} onClear={() => onEdit(null)} />
+      )}
     </TouchableOpacity>
   );
 

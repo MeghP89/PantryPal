@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
 import { extractNutritionalInfoFromLabel } from '../utils/readReceipt' 
-import EditItemModal from './EditItem'
+import InsertItemModal from './InsertItem'
 
 const { width: screenWidth } = Dimensions.get('window')
 
@@ -76,7 +76,7 @@ export default function ImagePreviewPopup({
   return (
     <>
       {nutrientItem != null ? (
-        <EditItemModal itemData={nutrientItem} onClear={onClear}/>
+        <InsertItemModal itemData={nutrientItem} onClear={onClear}/>
       )
         :
         (<Modal visible={visible} animationType="fade" transparent>
