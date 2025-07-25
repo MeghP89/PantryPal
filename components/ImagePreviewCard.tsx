@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import {
   View,
   Image,
@@ -7,20 +7,20 @@ import {
   StyleSheet,
   Dimensions,
   Modal,
-  Alert
-} from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { BlurView } from 'expo-blur'
-import { extractNutritionalInfoFromLabel } from '../utils/readReceipt' 
-import InsertItemModal from './InsertItem'
+  Alert,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { extractNutritionalInfoFromLabel } from '../utils/readReceipt';
+import InsertItemModal from './InsertItem';
+import LoadingComponent from './LoadingComponent';
 
-const { width: screenWidth } = Dimensions.get('window')
+const { width: screenWidth } = Dimensions.get('window');
 
 interface ImagePreviewPopupProps {
-  visible: boolean
-  imageUri: string | null
-  imageBase64: string | null
-  onClear: () => void
+  imageUri: string | null;
+  onClear: () => void;
+  imageBase64: string | null;
 }
 
 type ResponseSchema = {
@@ -30,18 +30,18 @@ type ResponseSchema = {
     NumberOfServings: number;
     TotalServings: number;
     ItemCategory:
-      | "Produce"
-      | "Dairy"
-      | "Meat"
-      | "Bakery"
-      | "Frozen"
-      | "Beverages"
-      | "Snacks"
-      | "Canned Goods"
-      | "Condiments"
-      | "Grains"
-      | "Seasonings"
-      | "Misc";
+      | 'Produce'
+      | 'Dairy'
+      | 'Meat'
+      | 'Bakery'
+      | 'Frozen'
+      | 'Beverages'
+      | 'Snacks'
+      | 'Canned Goods'
+      | 'Condiments'
+      | 'Grains'
+      | 'Seasonings'
+      | 'Misc';
     CaloriesPerServing: number;
     CalorieUnit: string;
     NutritionalInfo: {
@@ -53,53 +53,81 @@ type ResponseSchema = {
   };
 };
 
-export default function ImagePreviewPopup({
-  visible,
+export default function ImagePreviewCard({
   imageUri,
   onClear,
   imageBase64,
 }: ImagePreviewPopupProps) {
-  const [nutrientItem, setNutrientItem] = useState<ResponseSchema | null>(null)
+  const [nutrientItem, setNutrientItem] = useState<ResponseSchema | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const onUse = async (imageBase64: string | null) => {
-    if(imageBase64) {
-      console.log('pressed me')
-      const parsedItem = await extractNutritionalInfoFromLabel(imageBase64)
-      if (parsedItem)
-        console.log(parsedItem.NutritionalItem.itemName)
-        parsedItem.NutritionalItem.ItemQuantity = 1
-        setNutrientItem(parsedItem)
-    } else {
-      Alert.alert('ImageBase64 is null')
+  const onUse = async (base64: string | null) => {
+    if (!base64) {
+      Alert.alert('Image data is missing.');
+      return;
     }
-  }
-  return (
-    <>
-      {nutrientItem != null ? (
-        <InsertItemModal itemData={nutrientItem} onClear={onClear}/>
-      )
-        :
-        (<Modal visible={visible} animationType="fade" transparent>
-          {/* Blur background */}
-          <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
 
-          <View style={styles.centeredView}>
-            <View style={styles.card}>
-              <Pressable style={styles.closeButton} onPress={onClear}>
-                <Ionicons name="close" size={20} color="#1B5E20" />
-              </Pressable>
-
-              <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-
-              <Pressable style={styles.useButton} onPress={async () => onUse(imageBase64)}>
-                <Text style={styles.useButtonText}>Use This Image</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>)
+    setLoading(true);
+    try {
+      const parsedItem = await extractNutritionalInfoFromLabel(base64);
+      if (parsedItem) {
+        parsedItem.NutritionalItem.ItemQuantity = 1;
+        setNutrientItem(parsedItem);
+      } else {
+        Alert.alert('Could not read the image.');
       }
-    </>
-  )
+    } catch (error) {
+      console.error('Error extracting nutritional info:', error);
+      Alert.alert('An error occurred while reading the image.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setNutrientItem(null);
+    onClear();
+  };
+
+  // State 1: Loading
+  if (loading) {
+    return <LoadingComponent visible={true} message="Reading..." />;
+  }
+
+  // State 2: Nutrient data is ready, show the form
+  if (nutrientItem) {
+    return <InsertItemModal itemData={nutrientItem} onClear={handleClear} />;
+  }
+
+  // State 3: Default, show the image preview modal
+  if (imageUri) {
+    return (
+      <Modal visible={true} animationType="fade" transparent>
+        <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+        <View style={styles.centeredView}>
+          <View style={styles.card}>
+            <Pressable style={styles.closeButton} onPress={onClear}>
+              <Ionicons name="close" size={20} color="#1B5E20" />
+            </Pressable>
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+            <Pressable
+              style={styles.useButton}
+              onPress={() => onUse(imageBase64)}
+            >
+              <Text style={styles.useButtonText}>Use This Image</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Nothing to render
+  return null;
 }
 
 const styles = StyleSheet.create({
@@ -147,4 +175,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-})
+});
