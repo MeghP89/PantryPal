@@ -62,6 +62,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
   ];
   const [modalVisible, setModalVisible] = useState(true);
   const [item, setItem] = useState<NutritionalItem>(itemData);
+  const [loading, setLoading] = useState(false);
 
   const theme = useTheme();
 
@@ -95,63 +96,69 @@ export default function EditItemModal({ itemData, onClear }: Props) {
   };
 
   const handleSave = async () => {
-    const itemToSave = {
-      item_name: item.itemName,
-      serving_unit: item.ServingUnit,
-      number_of_servings: item.NumberOfServings,
-      total_servings: item.TotalServings,
-      calories_per_serving: item.CaloriesPerServing,
-      calorie_unit: item.CalorieUnit,
-      item_category: item.ItemCategory,
-      item_quantity: item.ItemQuantity,
-    };
+    setLoading(true);
+    try {
+      const itemToSave = {
+        item_name: item.itemName,
+        serving_unit: item.ServingUnit,
+        number_of_servings: item.NumberOfServings,
+        total_servings: item.TotalServings,
+        calories_per_serving: item.CaloriesPerServing,
+        calorie_unit: item.CalorieUnit,
+        item_category: item.ItemCategory,
+        item_quantity: item.ItemQuantity,
+      };
 
-    const { data, error } = await supabase
-      .from('nutritional_items')
-      .update(itemToSave)
-      .eq('itemid', item.id)
-    
-    
+      const { data, error } = await supabase
+        .from('nutritional_items')
+        .update(itemToSave)
+        .eq('itemid', item.id)
+      
+      
 
-    if (error) {
-      console.error("Update failed:", error);
-    } else {
-      console.log("Update successful",data);
-      // Now, handle the nutritional info. This is a bit more complex.
-      // We need to delete all existing nutritional info for the item and then insert the new ones.
-      const { error: deleteError } = await supabase
-        .from('nutritional_info')
-        .delete()
-        .eq('item_id', item.id)
-
-      if (deleteError) {
-        console.error("Failed to delete old nutritional info:", deleteError);
-        // Handle this error - maybe rollback the item update?
+      if (error) {
+        console.error("Update failed:", error);
       } else {
-        const nutrientsToInsert = item.NutritionalInfo.map(nutrient => ({
-          item_id: item.id,
-          nutrient_name: nutrient.NutrientName,
-          nutrient_amount: nutrient.NutrientAmount,
-          nutrient_unit: nutrient.NutrientUnit,
-        }));
+        console.log("Update successful",data);
+        // Now, handle the nutritional info. This is a bit more complex.
+        // We need to delete all existing nutritional info for the item and then insert the new ones.
+        const { error: deleteError } = await supabase
+          .from('nutritional_info')
+          .delete()
+          .eq('item_id', item.id)
 
-        console.log("Updating nutritional_info with:", JSON.stringify(nutrientsToInsert, null, 2));
+        if (deleteError) {
+          console.error("Failed to delete old nutritional info:", deleteError);
+          // Handle this error - maybe rollback the item update?
+        } else {
+          const nutrientsToInsert = item.NutritionalInfo.map(nutrient => ({
+            item_id: item.id,
+            nutrient_name: nutrient.NutrientName,
+            nutrient_amount: nutrient.NutrientAmount,
+            nutrient_unit: nutrient.NutrientUnit,
+          }));
 
-        if (nutrientsToInsert.length > 0) {
-            const { error: insertError } = await supabase
-                .from('nutritional_info')
-                .insert(nutrientsToInsert);
+          console.log("Updating nutritional_info with:", JSON.stringify(nutrientsToInsert, null, 2));
 
-            if (insertError) {
-                console.error("Failed to insert new nutritional info:", insertError);
-            }
+          if (nutrientsToInsert.length > 0) {
+              const { error: insertError } = await supabase
+                  .from('nutritional_info')
+                  .insert(nutrientsToInsert);
+
+              if (insertError) {
+                  console.error("Failed to insert new nutritional info:", insertError);
+              }
+          }
         }
       }
+    } catch (error) {
+      console.error("Error saving item:", error);
+    } finally {
+      console.log("Saved item:", item);
+      setLoading(false);
+      setModalVisible(false);
+      onClear()
     }
-
-    console.log("Saved item:", item);
-    setModalVisible(false);
-    onClear()
   };
 
   const handleCancel = () => {
@@ -331,7 +338,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
                 <Button mode="outlined" onPress={handleCancel} style={styles.button}>
                   Cancel
                 </Button>
-                <Button mode="contained" onPress={handleSave} style={styles.button}>
+                <Button mode="contained" loading={loading} onPress={handleSave} style={styles.button}>
                   Save
                 </Button>
               </View>
