@@ -24,7 +24,7 @@ type NutritionalItem = {
   id: string;
   itemName: string;
   ServingUnit: string;
-  NumberOfServings: number;
+  AmountPerServing: number;
   TotalServings: number;
   ItemCategory:
     | "Produce"
@@ -93,7 +93,7 @@ export default function NutritionalItemsScreen() {
           id: item.itemid.toString(),
           itemName: item.item_name,
           ServingUnit: item.serving_unit,
-          NumberOfServings: item.number_of_servings,
+          AmountPerServing: item.amount_per_serving,
           TotalServings: item.total_servings,
           ItemCategory: item.item_category,
           CaloriesPerServing: item.calories_per_serving,
@@ -211,7 +211,7 @@ export default function NutritionalItemsScreen() {
               <View style={styles.servingDetail}>
                 <Text style={styles.servingLabel}>Serving</Text>
                 <Text style={styles.servingValue}>
-                  {item.NumberOfServings} {item.ServingUnit}
+                  {item.AmountPerServing} {item.ServingUnit}
                 </Text>
               </View>
               <View style={styles.servingDetail}>

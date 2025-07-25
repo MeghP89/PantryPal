@@ -24,7 +24,7 @@ type ResponseSchema = {
   NutritionalItem: {
     itemName: string;
     ServingUnit: string;
-    NumberOfServings: number;
+    AmountPerServing: number;
     TotalServings: number;
     ItemCategory:
       | "Produce"
@@ -62,6 +62,7 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
   ];
   const [modalVisible, setModalVisible] = useState(true);
   const [item, setItem] = useState<ResponseSchema>(itemData);
+  const [loading, setLoading] = useState(false);
 
   const theme = useTheme();
 
@@ -104,51 +105,57 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
   };
 
   const handleSave = async () => {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.user?.id) {
-      console.error("Session error or user not found:", sessionError);
-      return;
-    }
-    const user_id = session?.user.id
-    const itemToSave = {
-      userid: user_id,
-      item_name: item.NutritionalItem.itemName,
-      serving_unit: item.NutritionalItem.ServingUnit,
-      number_of_servings: item.NutritionalItem.NumberOfServings,
-      total_servings: item.NutritionalItem.TotalServings,
-      calories_per_serving: item.NutritionalItem.CaloriesPerServing,
-      calorie_unit: item.NutritionalItem.CalorieUnit,
-      item_category: item.NutritionalItem.ItemCategory,
-      item_quantity: item.NutritionalItem.ItemQuantity,
-    };
+    setLoading(true);
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.user?.id) {
+        console.error("Session error or user not found:", sessionError);
+        return;
+      }
+      const user_id = session?.user.id
+      const itemToSave = {
+        userid: user_id,
+        item_name: item.NutritionalItem.itemName,
+        serving_unit: item.NutritionalItem.ServingUnit,
+        amount_per_serving: item.NutritionalItem.AmountPerServing,
+        total_servings: item.NutritionalItem.TotalServings,
+        calories_per_serving: item.NutritionalItem.CaloriesPerServing,
+        calorie_unit: item.NutritionalItem.CalorieUnit,
+        item_category: item.NutritionalItem.ItemCategory,
+        item_quantity: item.NutritionalItem.ItemQuantity,
+      };
 
-    const { data, error } = await supabase
-      .from('nutritional_items')
-      .insert([
-        itemToSave
-      ])
-      .select()
-    if (error) {
-      console.error("Insert failed:", error);
-    } else if (data) {
-      console.log(data)
-      const item_id = data?.[0]?.itemid;
-      for(const nutrient of item.NutritionalItem.NutritionalInfo) {
-        const { error } = await supabase
-            .from('nutritional_info')
-            .insert([
-            { item_id: item_id, nutrient_name: nutrient.NutrientName, nutrient_amount: nutrient.NutrientAmount, nutrient_unit: nutrient.NutrientUnit }
-            ])
-            .select()
-      }    
-          
-      console.log("Inserted ID:", item_id);
+      const { data, error } = await supabase
+        .from('nutritional_items')
+        .insert([
+          itemToSave
+        ])
+        .select()
+      if (error) {
+        console.error("Insert failed:", error);
+      } else if (data) {
+        console.log(data)
+        const item_id = data?.[0]?.itemid;
+        for(const nutrient of item.NutritionalItem.NutritionalInfo) {
+          const { error } = await supabase
+              .from('nutritional_info')
+              .insert([
+              { item_id: item_id, nutrient_name: nutrient.NutrientName, nutrient_amount: nutrient.NutrientAmount, nutrient_unit: nutrient.NutrientUnit }
+              ])
+              .select()
+        }    
+            
+        console.log("Inserted ID:", item_id);
+      }
+    } catch (error) {
+      setLoading(false);
+      console.error("Error saving item:", error);
+    } finally {
+      console.log("Saved item:", item);
+      setLoading(false);
+      setModalVisible(false);
+      onClear()
     }
-
-    
-    console.log("Saved item:", item);
-    setModalVisible(false);
-    onClear()
   };
 
   const handleCancel = () => {
@@ -217,17 +224,17 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                 {/* Serving Info */}
                 <View style={styles.row}>
                   <View style={styles.halfWidth}>
-                    <Text style={styles.label}>Servings</Text>
+                    <Text style={styles.label}>Serving Size</Text>
                     <TextInput
                       mode="outlined"
                       keyboardType="numeric"
-                      value={(item.NutritionalItem.NumberOfServings ?? 0).toString()}
+                      value={(item.NutritionalItem.AmountPerServing ?? 0).toString()}
                       onChangeText={(text) =>
                         setItem({
                           ...item,
                           NutritionalItem: {
                             ...item.NutritionalItem,
-                            NumberOfServings: parseFloat(text) || 0,
+                            AmountPerServing: parseFloat(text) || 0,
                           },
                         })
                       }
@@ -340,7 +347,7 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                 <Button mode="outlined" onPress={handleCancel} style={styles.button}>
                   Cancel
                 </Button>
-                <Button mode="contained" onPress={handleSave} style={styles.button}>
+                <Button mode="contained" loading={loading} onPress={handleSave} style={styles.button}>
                   Save
                 </Button>
               </View>
