@@ -5,8 +5,8 @@ import { BlurView } from 'expo-blur';
 
 interface CheckItemSimilarityProps {
   visible: boolean;
-  newItemName: string;
-  existingItemName: string;
+  newItemName: string | null;
+  existingItemName: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -34,7 +34,7 @@ export default function CheckItemSimilarity({
               An item named <Text style={styles.boldText}>"{existingItemName}"</Text> already exists.
             </Text>
             <Text style={styles.messageText}>
-              Do want to add this item named <Text style={styles.boldText}>"{existingItemName}"</Text>?
+              Do you want to add this item named <Text style={styles.boldText}>"{existingItemName}"</Text>?
             </Text>
           </Card.Content>
           <Card.Actions style={styles.actions}>
@@ -44,7 +44,7 @@ export default function CheckItemSimilarity({
               style={[styles.button, { borderColor: theme.colors.error }]}
               labelStyle={{ color: theme.colors.error }}
             >
-              Don't Add
+              Add Separately
             </Button>
             <Button
               mode="contained"
@@ -52,7 +52,7 @@ export default function CheckItemSimilarity({
               style={styles.button}
               buttonColor={theme.colors.primary}
             >
-              Add Anyway
+              Add To Existing Item
             </Button>
           </Card.Actions>
         </Card>
