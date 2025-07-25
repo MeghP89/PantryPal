@@ -76,41 +76,41 @@ export default function NutritionalItemsScreen() {
   );
   const theme = useTheme();
 
-  useEffect(() => {
-    const fetchItems = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
-        const { data, error } = await supabase
-          .from("nutritional_items")
-          .select("*, nutritional_info(*)")
-          .eq("userid", session.user.id);
+  const fetchItems = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) {
+      const { data, error } = await supabase
+        .from("nutritional_items")
+        .select("*, nutritional_info(*)")
+        .eq("userid", session.user.id);
 
-        if (error) {
-          console.error("Error fetching items:", error);
-        } else if (data) {
-          const formattedItems: NutritionalItem[] = data.map((item: any) => ({
-            id: item.itemid.toString(),
-            itemName: item.item_name,
-            ServingUnit: item.serving_unit,
-            NumberOfServings: item.number_of_servings,
-            TotalServings: item.total_servings,
-            ItemCategory: item.item_category,
-            CaloriesPerServing: item.calories_per_serving,
-            CalorieUnit: item.calorie_unit,
-            ItemQuantity: item.item_quantity,
-            NutritionalInfo: item.nutritional_info.map((nutrient: any) => ({
-              NutrientName: nutrient.nutrient_name,
-              NutrientAmount: nutrient.nutrient_amount,
-              NutrientUnit: nutrient.nutrient_unit,
-            })),
-          }));
-          setItems(formattedItems);
-        }
+      if (error) {
+        console.error("Error fetching items:", error);
+      } else if (data) {
+        const formattedItems: NutritionalItem[] = data.map((item: any) => ({
+          id: item.itemid.toString(),
+          itemName: item.item_name,
+          ServingUnit: item.serving_unit,
+          NumberOfServings: item.number_of_servings,
+          TotalServings: item.total_servings,
+          ItemCategory: item.item_category,
+          CaloriesPerServing: item.calories_per_serving,
+          CalorieUnit: item.calorie_unit,
+          ItemQuantity: item.item_quantity,
+          NutritionalInfo: item.nutritional_info.map((nutrient: any) => ({
+            NutrientName: nutrient.nutrient_name,
+            NutrientAmount: nutrient.nutrient_amount,
+            NutrientUnit: nutrient.nutrient_unit,
+          })),
+        }));
+        setItems(formattedItems);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchItems();
     const subscription = supabase
       .channel("custom-all-channel")
@@ -118,7 +118,15 @@ export default function NutritionalItemsScreen() {
         "postgres_changes",
         { event: "*", schema: "public", table: "nutritional_items" },
         (payload) => {
-          console.log("Change received!", payload);
+          console.log("Change received on nutritional_items!", payload);
+          fetchItems();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "nutritional_info" },
+        (payload) => {
+          console.log("Change received on nutritional_info!", payload);
           fetchItems();
         }
       )
