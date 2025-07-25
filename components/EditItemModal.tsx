@@ -169,7 +169,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
 
   return (
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.overlay}>
+        <View pointerEvents={loading ? "none" : "auto"} style={styles.overlay}>
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.keyboardView}
