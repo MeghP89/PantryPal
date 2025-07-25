@@ -55,7 +55,7 @@ type Props = {
   onClear: () => void;
 };
 
-export default function EditItemModal({ itemData, onClear }: Props) {
+export default function InsertItemModal({ itemData, onClear }: Props) {
   const categories = [
     "Produce", "Dairy", "Meat", "Bakery", "Frozen", "Beverages",
     "Snacks", "Canned Goods", "Condiments", "Grains", "Seasonings", "Misc"
