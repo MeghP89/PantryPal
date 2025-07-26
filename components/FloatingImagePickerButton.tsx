@@ -15,11 +15,13 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import ImagePreviewCard from './ImagePreviewCard'
+import InsertItemModal from './InsertItemModal'
 
 const { width: screenWidth } = Dimensions.get('window')
 
 export default function FloatingImagePickerButton() {
   const [expanded, setExpanded] = useState(false)
+  const [modalVisable, setModalVisable] = useState(false)
   const [image, setImage] = useState<string | null>(null)
   const [imageBase64, setImageBase64] = useState<string | null >(null)
   const widgetHeight = useSharedValue(0)
@@ -27,7 +29,7 @@ export default function FloatingImagePickerButton() {
 
   const handlePress = () => {
     if (!expanded) {
-      widgetHeight.value = withSpring(140)
+      widgetHeight.value = withSpring(160)
       opacity.value = withTiming(1)
       setExpanded(true)
     } else {
@@ -59,30 +61,35 @@ export default function FloatingImagePickerButton() {
   }
 
   const handleTakePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync()
-    if (!permission.granted) {
-      alert('Camera permission is required.')
-      return
+      const permission = await ImagePicker.requestCameraPermissionsAsync()
+      if (!permission.granted) {
+        alert('Camera permission is required.')
+        return
+      }
+  
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        base64: true,
+        aspect: [4, 3],
+        allowsEditing: true,
+        quality: 1,
+      })
+  
+      if (!result.canceled) {
+        setImage(result.assets[0].uri)
+        setImageBase64(result.assets[0].base64 || null)
+        handlePress()
+      }
+  
+      if (result.canceled) {
+        alert('You did not select any image.')
+      }
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      base64: true,
-      aspect: [4, 3],
-      allowsEditing: true,
-      quality: 1,
-    })
-
-    if (!result.canceled) {
-      setImage(result.assets[0].uri)
-      setImageBase64(result.assets[0].base64 || null)
-      handlePress()
-    }
-
-    if (result.canceled) {
-      alert('You did not select any image.')
-    }
-  }
+  const handleManualEntry = () => {
+    handlePress(); // Close the widget
+    setModalVisable(true);
+  };
 
   return (
     <View style={styles.absoluteContainer}>
@@ -92,6 +99,9 @@ export default function FloatingImagePickerButton() {
         </Pressable>
         <Pressable style={styles.widgetButton} onPress={handleTakePhoto}>
           <Text style={styles.widgetButtonText}>Take a Photo</Text>
+        </Pressable>
+        <Pressable style={styles.widgetButton} onPress={handleManualEntry}>
+          <Text style={styles.widgetButtonText}>Manual Entry</Text>
         </Pressable>
       </Animated.View>
 
@@ -106,6 +116,9 @@ export default function FloatingImagePickerButton() {
           onClear={() => setImage(null)}
           imageBase64={imageBase64}
         />
+      )}
+      {modalVisable && (
+        <InsertItemModal onClear={() => setModalVisable(false)} />
       )}
 
     </View>
