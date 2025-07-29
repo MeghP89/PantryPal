@@ -17,6 +17,7 @@ import {
   IconButton,
   Chip,
 } from "react-native-paper";
+import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/utils/supabase";
 
@@ -169,7 +170,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
 
   return (
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View pointerEvents={loading ? "none" : "auto"} style={styles.overlay}>
+        <BlurView pointerEvents={loading ? "none" : "auto"} style={styles.overlay}>
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.keyboardView}
@@ -345,7 +346,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
               </View>
             </Card>
           </KeyboardAvoidingView>
-        </View>
+        </BlurView>
       </Modal>
   );
 }
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 50, 0, 0.4)", // dark green transparent overlay
+    backgroundColor: "rgba(107, 54, 0, 0.56)", // dark green transparent overlay
     justifyContent: "center",
     alignItems: "center",
   },
