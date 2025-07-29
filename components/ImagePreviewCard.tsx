@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { extractNutritionalInfoFromLabel } from '../utils/readReceipt';
+import { extractNutritionalInfoFromLabel, extractBatchNutritionalInfoFromLabel } from '../utils/readReceipt';
 import InsertItemModal from './InsertItemModal';
 import LoadingComponent from './LoadingComponent';
+import BatchInsertModal from './BatchInsertModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -23,34 +24,26 @@ interface ImagePreviewPopupProps {
   imageBase64: string | null;
 }
 
+type NutritionalItemData = {
+  itemName: string;
+  ServingUnit: string;
+  AmountPerServing: number;
+  TotalServings: number;
+  ItemCategory:
+    | 'Produce' | 'Dairy' | 'Meat' | 'Bakery' | 'Frozen' | 'Beverages'
+    | 'Snacks' | 'Canned Goods' | 'Condiments' | 'Grains' | 'Seasonings' | 'Misc';
+  CaloriesPerServing: number;
+  CalorieUnit: string;
+  NutritionalInfo: {
+    NutrientName: string;
+    NutrientAmount: number;
+    NutrientUnit: string;
+  }[];
+  ItemQuantity?: number;
+};
+
 type ResponseSchema = {
-  NutritionalItem: {
-    itemName: string;
-    ServingUnit: string;
-    AmountPerServing: number;
-    TotalServings: number;
-    ItemCategory:
-      | 'Produce'
-      | 'Dairy'
-      | 'Meat'
-      | 'Bakery'
-      | 'Frozen'
-      | 'Beverages'
-      | 'Snacks'
-      | 'Canned Goods'
-      | 'Condiments'
-      | 'Grains'
-      | 'Seasonings'
-      | 'Misc';
-    CaloriesPerServing: number;
-    CalorieUnit: string;
-    NutritionalInfo: {
-      NutrientName: string;
-      NutrientAmount: number;
-      NutrientUnit: string;
-    }[];
-    ItemQuantity: number;
-  };
+  NutritionalItem: NutritionalItemData;
 };
 
 export default function ImagePreviewCard({
@@ -59,6 +52,7 @@ export default function ImagePreviewCard({
   imageBase64,
 }: ImagePreviewPopupProps) {
   const [nutrientItem, setNutrientItem] = useState<ResponseSchema | null>(null);
+  const [batchItems, setBatchItems] = useState<NutritionalItemData[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   const onUse = async (base64: string | null) => {
@@ -71,7 +65,6 @@ export default function ImagePreviewCard({
     try {
       const parsedItem = await extractNutritionalInfoFromLabel(base64);
       if (parsedItem) {
-        parsedItem.NutritionalItem.ItemQuantity = 1;
         setNutrientItem(parsedItem);
       } else {
         Alert.alert('Could not read the image.');
@@ -84,22 +77,46 @@ export default function ImagePreviewCard({
     }
   };
 
+  const onBatchUse = async (base64: string | null) => {
+    if (!base64) {
+      Alert.alert('Image data is missing.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const parsedItems = await extractBatchNutritionalInfoFromLabel(base64);
+      if (parsedItems && parsedItems.length > 0) {
+        setBatchItems(parsedItems);
+      } else {
+        Alert.alert('Could not read any items from the image.');
+      }
+    } catch (error) {
+      console.error('Error extracting batch nutritional info:', error);
+      Alert.alert('An error occurred while reading the image for batch processing.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClear = () => {
     setNutrientItem(null);
+    setBatchItems(null);
     onClear();
   };
 
-  // State 1: Loading
   if (loading) {
     return <LoadingComponent visible={true} message="Reading..." />;
   }
 
-  // State 2: Nutrient data is ready, show the form
+  if (batchItems) {
+    return <BatchInsertModal itemsData={batchItems} onClear={handleClear} />;
+  }
+
   if (nutrientItem) {
     return <InsertItemModal itemData={nutrientItem} onClear={handleClear} />;
   }
 
-  // State 3: Default, show the image preview modal
   if (imageUri) {
     return (
       <Modal visible={true} animationType="fade" transparent>
@@ -118,7 +135,13 @@ export default function ImagePreviewCard({
               style={styles.useButton}
               onPress={() => onUse(imageBase64)}
             >
-              <Text style={styles.useButtonText}>Use This Image</Text>
+              <Text style={styles.useButtonText}>Use (Single Item)</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.useButton, styles.batchButton]}
+              onPress={() => onBatchUse(imageBase64)}
+            >
+              <Text style={styles.useButtonText}>Use (Batch Insert)</Text>
             </Pressable>
           </View>
         </View>
@@ -126,7 +149,6 @@ export default function ImagePreviewCard({
     );
   }
 
-  // Nothing to render
   return null;
 }
 
@@ -162,17 +184,24 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 8,
+    marginBottom: 16,
   },
   useButton: {
-    marginTop: 16,
+    width: '100%',
     backgroundColor: '#2E7D32',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
+  },
+  batchButton: {
+    marginTop: 8,
+    backgroundColor: '#004D40',
   },
   useButtonText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
+    textAlign: 'center',
   },
 });
+
