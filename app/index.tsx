@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router'
 import { View, Text, StyleSheet } from 'react-native'
 import { Button } from 'react-native-paper'
+import { batchInsertItems } from '@/utils/batchInsertItems'
 
 export default function Index() {
   const router = useRouter()
@@ -44,7 +45,7 @@ export default function Index() {
 
           <Button
             mode="outlined"
-            onPress={() => router.push('/(test)/test')}  // navigate programmatically
+            onPress={batchInsertItems}  // navigate programmatically
             style={styles.signupButton}
             contentStyle={styles.buttonContent}
             labelStyle={[styles.buttonText, styles.signupButtonText]}

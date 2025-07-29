@@ -8,7 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  ImageBackground,
 } from "react-native";
 import {
   Text,
@@ -77,9 +78,7 @@ export default function NutritionalItemsScreen() {
   const [edit, setEdit] = useState<string | null>(null);
   const [overviewItemId, setOverviewItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const theme = useTheme();
 
   const fetchItems = async () => {
@@ -123,18 +122,12 @@ export default function NutritionalItemsScreen() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "nutritional_items" },
-        (payload) => {
-          console.log("Change received on nutritional_items!", payload);
-          fetchItems();
-        }
+        () => fetchItems()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "nutritional_info" },
-        (payload) => {
-          console.log("Change received on nutritional_info!", payload);
-          fetchItems();
-        }
+        () => fetchItems()
       )
       .subscribe();
 
@@ -144,43 +137,46 @@ export default function NutritionalItemsScreen() {
   }, []);
 
   const categories = [
-    "All",
-    "Produce",
-    "Dairy",
-    "Meat",
-    "Bakery",
-    "Frozen",
-    "Beverages",
-    "Snacks",
-    "Canned Goods",
-    "Condiments",
-    "Grains",
-    "Seasonings",
-    "Misc",
+    "All", "Produce", "Dairy", "Meat", "Bakery", "Frozen", "Beverages",
+    "Snacks", "Canned Goods", "Condiments", "Grains", "Seasonings", "Misc",
   ];
 
   const onEdit = (id: string | null) => {
     setEdit(id);
-  }
+  };
 
   const filteredItems = items.filter((item) => {
-    const matchesSearch = item.itemName
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      !selectedCategory ||
-      selectedCategory === "All" ||
-      item.ItemCategory === selectedCategory;
+    const matchesSearch = item.itemName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || selectedCategory === "All" || item.ItemCategory === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const renderNutritionalInfo = (
-    nutrients: NutritionalItem["NutritionalInfo"]
-  ) => {
+  const groupedItems = filteredItems.reduce((acc, item) => {
+    const category = item.ItemCategory;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(item);
+    return acc;
+  }, {} as Record<string, NutritionalItem[]>);
+
+  const shelfOrder = [
+    "Produce", "Dairy", "Meat", "Bakery", "Grains", "Canned Goods",
+    "Condiments", "Seasonings", "Beverages", "Snacks", "Frozen", "Misc"
+  ];
+
+  const sortedCategories = Object.keys(groupedItems).sort((a, b) => {
+    const indexA = shelfOrder.indexOf(a);
+    const indexB = shelfOrder.indexOf(b);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  const renderNutritionalInfo = (nutrients: NutritionalItem["NutritionalInfo"]) => {
     return nutrients.slice(0, 3).map((nutrient, index) => (
       <Text key={index} style={styles.nutrientText}>
-        {nutrient.NutrientName}: {nutrient.NutrientAmount}
-        {nutrient.NutrientUnit}
+        {nutrient.NutrientName}: {nutrient.NutrientAmount}{nutrient.NutrientUnit}
       </Text>
     ));
   };
@@ -201,125 +197,89 @@ export default function NutritionalItemsScreen() {
     }
 
     return (
-      <TouchableOpacity onPress={() => setOverviewItemId(item.id)} key={item.id} activeOpacity={0.7}>
-        <Card style={styles.itemCard}>
-          <LinearGradient
-            colors={[theme.colors.surface, theme.colors.surfaceVariant]}
-            style={styles.cardGradient}
-          >
-            <Card.Content style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.itemName}</Text>
-                  <Chip
-                    style={[
-                      styles.categoryChip,
-                      { backgroundColor: getCategoryColor(item.ItemCategory) },
-                    ]}
-                    textStyle={styles.categoryChipText}
-                  >
-                    {item.ItemCategory}
-                  </Chip>
+      <View key={item.id} style={{ marginRight: 12 }}>
+        <TouchableOpacity onPress={() => setOverviewItemId(item.id)} key={item.id} activeOpacity={0.8}>
+          <Card style={styles.itemCard}>
+            <LinearGradient
+              colors={['#F5EFE0', '#E8E0D0']}
+              style={styles.cardGradient}
+            >
+              <Card.Content style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.itemName}</Text>
+                    <Chip
+                      style={[styles.categoryChip, { backgroundColor: getCategoryColor(item.ItemCategory) }]}
+                      textStyle={styles.categoryChipText}
+                    >
+                      {item.ItemCategory}
+                    </Chip>
+                  </View>
+                  <IconButton icon="pencil" size={20} onPress={() => onEdit(item.id)} style={{backgroundColor: 'rgba(0,0,0,0.05)'}} />
                 </View>
-                <IconButton
-                  icon="pencil"
-                  size={20}
-                  onPress={() => onEdit(item.id)}
-                />
-              </View>
 
-              <View style={styles.servingInfo}>
-                <View style={styles.servingDetail}>
-                  <Text style={styles.servingLabel}>Serving</Text>
-                  <Text style={styles.servingValue}>
-                    {item.AmountPerServing} {item.ServingUnit}
-                  </Text>
+                <View style={styles.servingInfo}>
+                  <View style={styles.servingDetail}>
+                    <Text style={styles.servingLabel}>Serving</Text>
+                    <Text style={styles.servingValue}>{item.AmountPerServing} {item.ServingUnit}</Text>
+                  </View>
+                  <View style={styles.servingDetail}>
+                    <Text style={styles.servingLabel}>Quantity</Text>
+                    <Text style={styles.servingValue}>{item.ItemQuantity}</Text>
+                  </View>
+                  <View style={styles.servingDetail}>
+                    <Text style={styles.servingLabel}>Calories</Text>
+                    <Text style={styles.calorieValue}>{item.CaloriesPerServing} {item.CalorieUnit}</Text>
+                  </View>
                 </View>
-                <View style={styles.servingDetail}>
-                  <Text style={styles.servingLabel}>Quantity</Text>
-                  <Text style={styles.servingValue}>{item.ItemQuantity}</Text>
-                </View>
-                <View style={styles.servingDetail}>
-                  <Text style={styles.servingLabel}>Calories</Text>
-                  <Text style={styles.calorieValue}>
-                    {item.CaloriesPerServing} {item.CalorieUnit}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.nutritionalSection}>
-                <Text style={styles.nutritionalTitle}>Key Nutrients</Text>
-                <View style={styles.nutrientsList}>
-                  {renderNutritionalInfo(item.NutritionalInfo)}
-                </View>
-              </View>
-            </Card.Content>
-          </LinearGradient>
-        </Card>
-        {edit === item.id && (
-          <EditItemModal itemData={item} onClear={() => onEdit(null)} />
-        )}
-      </TouchableOpacity>
+              </Card.Content>
+            </LinearGradient>
+          </Card>
+          {edit === item.id && <EditItemModal itemData={item} onClear={() => onEdit(null)} />}
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
+      <ImageBackground 
+        source={{ uri: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAIDAQT/xAAfEAEAAgICAwEBAQAAAAAAAAABEQIDEgQhMVFBYXH/xAAXAQADAQAAAAAAAAAAAAAAAAAAAQID/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwD00iYiZifTExEzE+mJ48zHhHHmY8JgAGAAAAAAAAAABiWWY9sSyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmAD//2Q==' }}
+        style={styles.backgroundGradient}
+        resizeMode="repeat"
       >
-        <LinearGradient
-          colors={["#e8f5e8", "#f1f8e9"]}
-          style={styles.backgroundGradient}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          {/* Header */}
           <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Nutritional Items</Text>
-              <Text style={styles.headerSubtitle}>
-                {filteredItems.length} items found
-              </Text>
+              <Text style={styles.headerTitle}>My Pantry</Text>
+              <Text style={styles.headerSubtitle}>{filteredItems.length} items in stock</Text>
             </View>
           </TouchableWithoutFeedback>
 
-          {/* Search Bar */}
           <View style={styles.searchContainer}>
             <Searchbar
-              placeholder="Search items..."
+              placeholder="Search in pantry..."
               onChangeText={setSearchQuery}
               value={searchQuery}
               style={styles.searchBar}
-              iconColor="#1b5e20"
+              iconColor="#5D4037"
               inputStyle={styles.searchInput}
             />
           </View>
 
-          {/* Category Filter */}
           <View style={styles.categorySection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryContent}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryContent}>
               {categories.map((category) => (
                 <Chip
                   key={category}
                   compact
-                  selected={
-                    selectedCategory === category ||
-                    (category === "All" && !selectedCategory)
-                  }
-                  onPress={() =>
-                    setSelectedCategory(category === "All" ? null : category)
-                  }
-                  style={[
-                    styles.filterChip,
-                    (selectedCategory === category ||
-                      (category === "All" && !selectedCategory)) &&
-                      styles.selectedFilterChip,
-                  ]}
-                  textStyle={styles.filterChipText}
+                  selected={selectedCategory === category || (category === "All" && !selectedCategory)}
+                  onPress={() => setSelectedCategory(category === "All" ? null : category)}
+                  style={[styles.filterChip, (selectedCategory === category || (category === "All" && !selectedCategory)) && styles.selectedFilterChip]}
+                  textStyle={[styles.filterChipText, (selectedCategory === category || (category === "All" && !selectedCategory)) && styles.selectedFilterChipText]}
                 >
                   {category}
                 </Chip>
@@ -327,19 +287,26 @@ export default function NutritionalItemsScreen() {
             </ScrollView>
           </View>
 
-          {/* Items List */}
           <ScrollView
             style={styles.itemsList}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.itemsContent}
           >
-            {filteredItems.map(renderItemCard)}
+            {sortedCategories.map((category) => (
+              <View key={category} style={styles.shelfContainer}>
+                <Text style={styles.shelfTitle}>{category}</Text>
+                <View style={styles.shelf}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelfContent}>
+                    {groupedItems[category].map(renderItemCard)}
+                  </ScrollView>
+                </View>
+              </View>
+            ))}
           </ScrollView>
 
-          {/* Floating Action Button */}
           <FloatingImagePickerButton />
-        </LinearGradient>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </ImageBackground>
     </SafeAreaView>
   );
 }
@@ -347,7 +314,7 @@ export default function NutritionalItemsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e8f5e8",
+    backgroundColor: '#5D4037',
   },
   backgroundGradient: {
     flex: 1,
@@ -358,26 +325,30 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1b5e20",
-    marginBottom: 4,
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#F5EFE0',
+    fontFamily: 'serif',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: "#388e3c",
-    opacity: 0.8,
+    color: '#E8E0D0',
+    opacity: 0.9,
   },
   searchContainer: {
     paddingHorizontal: 20,
     marginBottom: 8,
   },
   searchBar: {
-    backgroundColor: "#ffffff",
+    backgroundColor: 'rgba(245, 239, 224, 0.9)',
     elevation: 2,
+    borderRadius: 30,
   },
   searchInput: {
-    color: "#1b5e20",
+    color: '#5D4037',
   },
   categorySection: {
     marginBottom: 12,
@@ -388,35 +359,70 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     marginRight: 8,
-    backgroundColor: "#ffffff",
-    borderColor: "#81c784",
+    backgroundColor: 'rgba(245, 239, 224, 0.8)',
+    borderColor: '#8A655A',
     borderWidth: 1,
   },
   selectedFilterChip: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: '#8A655A',
   },
   filterChipText: {
-    color: "#1b5e20",
+    color: '#5D4037',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  selectedFilterChipText: {
+    color: '#F5EFE0',
   },
   itemsList: {
     flex: 1,
   },
   itemsContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     paddingBottom: 100,
   },
+  shelfContainer: {
+    marginBottom: 24,
+  },
+  shelfTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#F5EFE0',
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    fontFamily: 'serif',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  shelf: {
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 8,
+    paddingVertical: 16,
+    borderBottomWidth: 4,
+    padding: 10,
+    borderBottomColor: 'rgba(0,0,0,0.4)',
+    minHeight: 150,
+  },
+  shelfContent: {
+    paddingHorizontal: 10,
+    marginBlock: 10, 
+    alignItems: 'center',
+  },
   itemCard: {
-    marginBottom: 16,
-    elevation: 3,
+    width: "100%",
+    marginRight: 10,
+    elevation: 5,
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   cardGradient: {
     borderRadius: 12,
   },
   cardContent: {
-    padding: 16,
+    padding: 12,
   },
   cardHeader: {
     flexDirection: "row",
@@ -426,11 +432,12 @@ const styles = StyleSheet.create({
   },
   itemInfo: {
     flex: 1,
+    marginRight: 8,
   },
   itemName: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1b5e20",
+    color: "#5D4037",
     marginBottom: 6,
   },
   categoryChip: {
@@ -444,49 +451,35 @@ const styles = StyleSheet.create({
   servingInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 16,
-    paddingVertical: 12,
-    backgroundColor: "#f1f8e9",
+    marginTop: 8,
+    paddingVertical: 8,
+    backgroundColor: "rgba(138, 101, 90, 0.1)",
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   servingDetail: {
     alignItems: "center",
   },
   servingLabel: {
     fontSize: 12,
-    color: "#388e3c",
-    marginBottom: 4,
+    color: "#8A655A",
+    marginBottom: 2,
     fontWeight: "500",
   },
   servingValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1b5e20",
+    color: "#5D4037",
   },
   calorieValue: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#d32f2f",
-  },
-  nutritionalSection: {
-    marginTop: 8,
-  },
-  nutritionalTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1b5e20",
-    marginBottom: 8,
-  },
-  nutrientsList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+    color: "#C62828",
   },
   nutrientText: {
     fontSize: 12,
-    color: "#388e3c",
-    backgroundColor: "#e8f5e8",
+    color: "#5D4037",
+    backgroundColor: "rgba(138, 101, 90, 0.1)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
