@@ -3,12 +3,14 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  Modal
 } from "react-native";
 import {
   Text,
   Card,
   IconButton,
 } from "react-native-paper";
+import { BlurView } from "expo-blur";
 import Svg, { Circle } from 'react-native-svg';
 
 type NutritionalItem = {
@@ -175,100 +177,110 @@ export default function ItemOverView({
   ].filter(item => item.nutrient !== null && item.nutrient !== undefined);
 
   return (
-    <TouchableOpacity 
-      onPress={onClose} 
-      activeOpacity={0.8}
-      key={`item-overview-${itemData.id}`}
-    >
-      <Card style={styles.overviewCard}>
-        <Card.Content style={styles.overviewContent}>
-          {/* Header Row */}
-          <View style={styles.overviewHeader}>
-            <View style={styles.overviewItemInfo}>
-              <Text style={styles.overviewItemName} numberOfLines={2}>
-                {itemData.itemName}
-              </Text>
-              <Text style={styles.overviewServingInfo}>
-                {itemData.AmountPerServing} {itemData.ServingUnit} • Qty: {itemData.ItemQuantity}
-              </Text>
-            </View>
-            <View style={styles.rightHeader}>
-              <View style={styles.overviewCalories}>
-                <Text style={styles.overviewCaloriesNumber}>
-                  {itemData.CaloriesPerServing}
-                </Text>
-                <Text style={styles.overviewCaloriesLabel}>cal</Text>
-              </View>
-              <IconButton
-                icon="pencil"
-                size={20}
-                onPress={onEdit}
-                style={styles.overviewEditButton}
-                key={`edit-btn-${itemData.id}`}
-              />
-              <IconButton
-                icon="close"
-                size={20}
-                onPress={onClose}
-                style={styles.overviewEditButton}
-                key={`close-btn-${itemData.id}`}
-              />
-            </View>
-          </View>
-
-          {/* Macronutrients Circles */}
-          {nutrientArray.length > 0 && (
-            <View style={styles.macroCirclesContainer}>
-              <Text style={styles.sectionTitle}>Macronutrients</Text>
-              <View style={styles.macroCirclesRow}>
-                {nutrientArray.map((item) => (
-                  <NutrientCircle
-                    key={`${itemData.id}-${item.key}`}
-                    nutrient={item.nutrient!}
-                    color={item.color}
-                    maxValue={item.maxValue}
-                  />
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Additional Info Row */}
-          {additionalNutrients.length > 0 && (
-            <View style={styles.additionalSection}>
-              <Text style={styles.sectionTitle}>Additional Info</Text>
-              <View style={styles.additionalRow}>
-                {additionalNutrients.map((item) => (
-                  <View key={`${itemData.id}-additional-${item.key}`} style={styles.additionalItem}>
-                    <Text style={styles.additionalValue}>
-                      {item.nutrient!.NutrientAmount}{item.nutrient!.NutrientUnit}
+    <Modal visible={true} animationType="slide" transparent>
+        <BlurView intensity={60} tint="dark" style={styles.overlay}>
+            <TouchableOpacity 
+            onPress={onClose} 
+            activeOpacity={0.8}
+            key={`item-overview-${itemData.id}`}
+            >
+            <Card style={styles.overviewCard}>
+                <Card.Content style={styles.overviewContent}>
+                {/* Header Row */}
+                <View style={styles.overviewHeader}>
+                    <View style={styles.overviewItemInfo}>
+                    <Text style={styles.overviewItemName} numberOfLines={2}>
+                        {itemData.itemName}
                     </Text>
-                    <Text style={styles.additionalLabel}>
-                      {item.nutrient!.NutrientName}
+                    <Text style={styles.overviewServingInfo}>
+                        {itemData.AmountPerServing} {itemData.ServingUnit} • Qty: {itemData.ItemQuantity}
                     </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+                    </View>
+                    <View style={styles.rightHeader}>
+                    <View style={styles.overviewCalories}>
+                        <Text style={styles.overviewCaloriesNumber}>
+                        {itemData.CaloriesPerServing}
+                        </Text>
+                        <Text style={styles.overviewCaloriesLabel}>cal</Text>
+                    </View>
+                    <IconButton
+                        icon="pencil"
+                        size={20}
+                        onPress={onEdit}
+                        style={styles.overviewEditButton}
+                        key={`edit-btn-${itemData.id}`}
+                    />
+                    <IconButton
+                        icon="close"
+                        size={20}
+                        onPress={onClose}
+                        style={styles.overviewEditButton}
+                        key={`close-btn-${itemData.id}`}
+                    />
+                    </View>
+                </View>
 
-          {/* Category Badge */}
-          <View style={styles.overviewCategoryContainer}>
-            <View 
-              style={[
-                styles.overviewCategoryDot, 
-                { backgroundColor: getCategoryColor(itemData.ItemCategory) }
-              ]} 
-            />
-            <Text style={styles.overviewCategoryText}>{itemData.ItemCategory}</Text>
-          </View>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity>
+                {/* Macronutrients Circles */}
+                {nutrientArray.length > 0 && (
+                    <View style={styles.macroCirclesContainer}>
+                    <Text style={styles.sectionTitle}>Macronutrients</Text>
+                    <View style={styles.macroCirclesRow}>
+                        {nutrientArray.map((item) => (
+                        <NutrientCircle
+                            key={`${itemData.id}-${item.key}`}
+                            nutrient={item.nutrient!}
+                            color={item.color}
+                            maxValue={item.maxValue}
+                        />
+                        ))}
+                    </View>
+                    </View>
+                )}
+
+                {/* Additional Info Row */}
+                {additionalNutrients.length > 0 && (
+                    <View style={styles.additionalSection}>
+                    <Text style={styles.sectionTitle}>Additional Info</Text>
+                    <View style={styles.additionalRow}>
+                        {additionalNutrients.map((item) => (
+                        <View key={`${itemData.id}-additional-${item.key}`} style={styles.additionalItem}>
+                            <Text style={styles.additionalValue}>
+                            {item.nutrient!.NutrientAmount}{item.nutrient!.NutrientUnit}
+                            </Text>
+                            <Text style={styles.additionalLabel}>
+                            {item.nutrient!.NutrientName}
+                            </Text>
+                        </View>
+                        ))}
+                    </View>
+                    </View>
+                )}
+
+                {/* Category Badge */}
+                <View style={styles.overviewCategoryContainer}>
+                    <View 
+                    style={[
+                        styles.overviewCategoryDot, 
+                        { backgroundColor: getCategoryColor(itemData.ItemCategory) }
+                    ]} 
+                    />
+                    <Text style={styles.overviewCategoryText}>{itemData.ItemCategory}</Text>
+                </View>
+                </Card.Content>
+            </Card>
+            </TouchableOpacity>
+        </BlurView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: "rgba(107, 54, 0, 0.56)", // dark green transparent overlay
+    justifyContent: "center",
+  },
   overviewCard: {
     marginBottom: 16,
     elevation: 4,
