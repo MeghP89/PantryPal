@@ -23,6 +23,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../utils/supabase";
 import FloatingImagePickerButton from "@/components/FloatingImagePickerButton";
 import EditItemModal from "@/components/EditItemModal";
+import ItemOverView from "@/components/ItemOverview";
 
 type NutritionalItem = {
   id: string;
@@ -74,6 +75,7 @@ const getCategoryColor = (category: string) => {
 export default function NutritionalItemsScreen() {
   const [items, setItems] = useState<NutritionalItem[]>([]);
   const [edit, setEdit] = useState<string | null>(null);
+  const [overviewItemId, setOverviewItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     null
@@ -183,67 +185,83 @@ export default function NutritionalItemsScreen() {
     ));
   };
 
-  const renderItemCard = (item: NutritionalItem) => (
-    <TouchableOpacity key={item.id} activeOpacity={0.7}>
-      <Card style={styles.itemCard}>
-        <LinearGradient
-          colors={[theme.colors.surface, theme.colors.surfaceVariant]}
-          style={styles.cardGradient}
-        >
-          <Card.Content style={styles.cardContent}>
-            <View style={styles.cardHeader}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.itemName}</Text>
-                <Chip
-                  style={[
-                    styles.categoryChip,
-                    { backgroundColor: getCategoryColor(item.ItemCategory) },
-                  ]}
-                  textStyle={styles.categoryChipText}
-                >
-                  {item.ItemCategory}
-                </Chip>
-              </View>
-              <IconButton
-                icon="pencil"
-                size={20}
-                onPress={() => onEdit(item.id)}
-              />
-            </View>
+  const renderItemCard = (item: NutritionalItem) => {
+    if (overviewItemId === item.id) {
+      return (
+        <ItemOverView
+          itemData={item}
+          getCategoryColor={getCategoryColor}
+          onClose={() => setOverviewItemId(null)}
+          onEdit={() => {
+            setOverviewItemId(null);
+            onEdit(item.id);
+          }}
+        />
+      );
+    }
 
-            <View style={styles.servingInfo}>
-              <View style={styles.servingDetail}>
-                <Text style={styles.servingLabel}>Serving</Text>
-                <Text style={styles.servingValue}>
-                  {item.AmountPerServing} {item.ServingUnit}
-                </Text>
+    return (
+      <TouchableOpacity onPress={() => setOverviewItemId(item.id)} key={item.id} activeOpacity={0.7}>
+        <Card style={styles.itemCard}>
+          <LinearGradient
+            colors={[theme.colors.surface, theme.colors.surfaceVariant]}
+            style={styles.cardGradient}
+          >
+            <Card.Content style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.itemName}</Text>
+                  <Chip
+                    style={[
+                      styles.categoryChip,
+                      { backgroundColor: getCategoryColor(item.ItemCategory) },
+                    ]}
+                    textStyle={styles.categoryChipText}
+                  >
+                    {item.ItemCategory}
+                  </Chip>
+                </View>
+                <IconButton
+                  icon="pencil"
+                  size={20}
+                  onPress={() => onEdit(item.id)}
+                />
               </View>
-              <View style={styles.servingDetail}>
-                <Text style={styles.servingLabel}>Quantity</Text>
-                <Text style={styles.servingValue}>{item.ItemQuantity}</Text>
-              </View>
-              <View style={styles.servingDetail}>
-                <Text style={styles.servingLabel}>Calories</Text>
-                <Text style={styles.calorieValue}>
-                  {item.CaloriesPerServing} {item.CalorieUnit}
-                </Text>
-              </View>
-            </View>
 
-            <View style={styles.nutritionalSection}>
-              <Text style={styles.nutritionalTitle}>Key Nutrients</Text>
-              <View style={styles.nutrientsList}>
-                {renderNutritionalInfo(item.NutritionalInfo)}
+              <View style={styles.servingInfo}>
+                <View style={styles.servingDetail}>
+                  <Text style={styles.servingLabel}>Serving</Text>
+                  <Text style={styles.servingValue}>
+                    {item.AmountPerServing} {item.ServingUnit}
+                  </Text>
+                </View>
+                <View style={styles.servingDetail}>
+                  <Text style={styles.servingLabel}>Quantity</Text>
+                  <Text style={styles.servingValue}>{item.ItemQuantity}</Text>
+                </View>
+                <View style={styles.servingDetail}>
+                  <Text style={styles.servingLabel}>Calories</Text>
+                  <Text style={styles.calorieValue}>
+                    {item.CaloriesPerServing} {item.CalorieUnit}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </Card.Content>
-        </LinearGradient>
-      </Card>
-      {edit === item.id && (
-        <EditItemModal itemData={item} onClear={() => onEdit(null)} />
-      )}
-    </TouchableOpacity>
-  );
+
+              <View style={styles.nutritionalSection}>
+                <Text style={styles.nutritionalTitle}>Key Nutrients</Text>
+                <View style={styles.nutrientsList}>
+                  {renderNutritionalInfo(item.NutritionalInfo)}
+                </View>
+              </View>
+            </Card.Content>
+          </LinearGradient>
+        </Card>
+        {edit === item.id && (
+          <EditItemModal itemData={item} onClear={() => onEdit(null)} />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
