@@ -15,7 +15,9 @@ type InventoryItem = {
   id: string;
   name: string;
   quantity: number;
+  total_servings: number;
   unit: string;
+  amount: number;
 };
 
 type Props = {
@@ -37,7 +39,7 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
 
         const { data, error } = await supabase
           .from('nutritional_items')
-          .select('itemid, item_name, item_quantity, serving_unit')
+          .select('itemid, item_name, item_quantity, serving_unit, total_servings')
           .eq('userid', session.user.id);
 
         if (error) throw error;
@@ -48,6 +50,8 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
             name: item.item_name,
             quantity: item.item_quantity,
             unit: item.serving_unit,
+            total_servings: item.total_servings,
+            amount: item.total_servings * item.item_quantity
           }));
           setInventoryItems(formattedItems);
         }
@@ -112,7 +116,7 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
                 />
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemDetails}>
-                  ({item.quantity} {item.unit})
+                  ({item.amount} {item.unit})
                 </Text>
               </View>
             ))
