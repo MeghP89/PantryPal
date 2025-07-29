@@ -209,9 +209,10 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
         }
         console.log("Inserted ID:", item_id);
       }
+      setLoading(false);
+      onClear();
     } catch (error) {
       console.error("Error saving item:", error);
-    } finally {
       setLoading(false);
       onClear();
     }
@@ -221,7 +222,7 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
     onClear();
   };
 
-  if (showSimilarityCheck && similarItem) {
+  if (similarItem) {
     return (
       <CheckItemSimilarity
         visible={true}

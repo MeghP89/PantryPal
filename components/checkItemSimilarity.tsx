@@ -34,7 +34,7 @@ export default function CheckItemSimilarity({
               An item named <Text style={styles.boldText}>"{existingItemName}"</Text> already exists.
             </Text>
             <Text style={styles.messageText}>
-              Do you want to add this item named <Text style={styles.boldText}>"{existingItemName}"</Text>?
+              You are trying to add <Text style={styles.boldText}>"{newItemName}"</Text>. What would you like to do?
             </Text>
           </Card.Content>
           <Card.Actions style={styles.actions}>
