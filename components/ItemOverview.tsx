@@ -179,7 +179,7 @@ export default function ItemOverView({
   return (
     <Modal visible={true} animationType="slide" transparent>
         <BlurView intensity={60} tint="dark" style={styles.overlay}>
-            <TouchableOpacity 
+          <TouchableOpacity 
             onPress={onClose} 
             activeOpacity={0.8}
             key={`item-overview-${itemData.id}`}
@@ -268,7 +268,7 @@ export default function ItemOverView({
                 </View>
                 </Card.Content>
             </Card>
-            </TouchableOpacity>
+          </TouchableOpacity>
         </BlurView>
     </Modal>
   );
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   overviewEditButton: {
     margin: -4,
-    marginLeft: 6,
+    marginLeft: 10,
     backgroundColor: '#f5f5f5',
   },
   
