@@ -116,7 +116,7 @@ export default function NutritionalItemsScreen() {
   useEffect(() => {
     fetchItems();
     const subscription = supabase
-      .channel("custom-all-channel")
+      .channel("inventory-channel")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "nutritional_items" },

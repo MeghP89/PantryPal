@@ -1,7 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const API_KEY = "AIzaSyAEa_yhtmAibFNwU5hViphAmbV8FPNo6d0";
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+const ai = new GoogleGenAI({ apiKey: 'AIzaSyAEa_yhtmAibFNwU5hViphAmbV8FPNo6d0' });
 
 const COMMON_ITEM_PROPERTIES = {
   itemName: { type: Type.STRING },

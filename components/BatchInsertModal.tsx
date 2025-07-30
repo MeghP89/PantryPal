@@ -38,7 +38,6 @@ type NutritionalItemData = {
     | 'Produce' | 'Dairy' | 'Meat' | 'Bakery' | 'Frozen' | 'Beverages'
     | 'Snacks' | 'Canned Goods' | 'Condiments' | 'Grains' | 'Seasonings' | 'Misc';
   CaloriesPerServing: number;
-  CalorieUnit: string;
   NutritionalInfo: {
     NutrientName: string;
     NutrientAmount: number;
@@ -215,13 +214,6 @@ const EditableItem = ({ item, onUpdate, isExpanded, onExpand, onRemove }) => {
             />
           </View>
 
-          <TextInput
-            label="Calorie Unit"
-            value={item.CalorieUnit || 'kcal'}
-            onChangeText={(text) => updateField('CalorieUnit', text)}
-            style={styles.input}
-          />
-
           {/* Nutritional Information */}
           <View style={styles.nutritionHeader}>
             <Text style={styles.sectionTitle}>Nutritional Information</Text>
@@ -311,7 +303,6 @@ export default function BatchInsertModal({ itemsData, onClear }: Props) {
         amount_per_serving: item.AmountPerServing,
         total_servings: item.TotalServings,
         calories_per_serving: item.CaloriesPerServing,
-        calorie_unit: item.CalorieUnit,
         item_category: item.ItemCategory,
         item_quantity: item.ItemQuantity || 1,
       }));
