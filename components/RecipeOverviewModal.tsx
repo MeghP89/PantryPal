@@ -94,10 +94,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
+    maxHeight: '100%'
   },
   modalCard: {
     justifyContent: 'center',
     width: '100%',
+    height: '55%',
     maxHeight: '100%',
     backgroundColor: '#F5EFE0',
     borderRadius: 15,
