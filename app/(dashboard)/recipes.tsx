@@ -1,244 +1,220 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
 import {
-  Text,
-  Button,
-  Card,
-  Checkbox,
-  TextInput,
-  useTheme,
-  ActivityIndicator,
-} from 'react-native-paper';
-import { supabase } from '../../utils/supabase';
+  View,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  ImageBackground,
+  TouchableOpacity,
+} from 'react-native';
+import { Text, Searchbar, Card } from 'react-native-paper';
+import AddRecipe from '@/components/AddRecipe';
 
-type InventoryItem = {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-};
+// Mock data for recipes - replace with your actual data fetching
+const mockRecipes = [
+  {
+    id: '1',
+    name: 'Classic Spaghetti Bolognese',
+    description: 'A rich and hearty pasta dish that is a true family favorite.',
+    ingredients: ['Spaghetti', 'Ground Beef', 'Tomato Sauce', 'Onion', 'Garlic'],
+  },
+  {
+    id: '2',
+    name: 'Chicken & Veggie Stir-fry',
+    description: 'A quick, healthy, and colorful stir-fry, perfect for a weeknight meal.',
+    ingredients: ['Chicken Breast', 'Broccoli', 'Bell Peppers', 'Soy Sauce', 'Ginger'],
+  },
+  {
+    id: '3',
+    name: 'Lentil Soup',
+    description: 'A nourishing and flavorful soup, great for a cozy day.',
+    ingredients: ['Lentils', 'Carrots', 'Celery', 'Vegetable Broth', 'Spices'],
+  },
+];
 
 export default function RecipesScreen() {
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [instructions, setInstructions] = useState('');
-  const [loading, setLoading] = useState(true);
-  const theme = useTheme();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('view'); // 'view' or 'add'
 
-  useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) throw new Error("User not found");
+  const filteredRecipes = mockRecipes.filter((recipe) =>
+    recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-        const { data, error } = await supabase
-          .from('nutritional_items')
-          .select('itemid, item_name, item_quantity, serving_unit')
-          .eq('userid', session.user.id);
-
-        if (error) throw error;
-
-        if (data) {
-          const formattedItems: InventoryItem[] = data.map((item) => ({
-            id: item.itemid,
-            name: item.item_name,
-            quantity: item.item_quantity,
-            unit: item.serving_unit,
-          }));
-          setInventoryItems(formattedItems);
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          Alert.alert("Error", "Failed to fetch inventory items.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInventory();
-
-    const subscription = supabase
-      .channel("inventory-sync")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "nutritional_items" },
-        (payload) => {
-          console.log("Change on nutritional_items:", payload);
-          fetchInventory();
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "nutritional_info" },
-        (payload) => {
-          console.log("Change on nutritional_info:", payload);
-          fetchInventory();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, []);
-
-
-  const handleToggleItem = (id: string) => {
-    setSelectedItems((prev) =>
-      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
-    );
-  };
-
-  const handleCreateRecipe = () => {
-    // --- Placeholder for your future implementation ---
-    console.log("Creating recipe with the following data:");
-    console.log("Selected Item IDs:", selectedItems);
-    console.log("Instructions:", instructions);
-    Alert.alert(
-      "Recipe Created (Placeholder)",
-      `Selected ${selectedItems.length} items with instructions: "${instructions}"`
-    );
-    // --- End of placeholder ---
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator animating={true} size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading Inventory...</Text>
-      </View>
-    );
-  }
+  const renderRecipeCard = (recipe) => (
+    <TouchableOpacity>
+      <Card key={recipe.id} style={styles.recipeCard}>
+        <Card.Title title={recipe.name} titleStyle={styles.recipeTitle} />
+        <Card.Content>
+          <Text style={styles.recipeDescription}>{recipe.description}</Text>
+          <View style={styles.ingredientList}>
+            {recipe.ingredients.map((ing, index) => (
+              <Text key={index} style={styles.ingredientText}>
+                {ing}
+              </Text>
+            ))}
+          </View>
+        </Card.Content>
+      </Card>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.heading}>Create a New Recipe</Text>
-      <Text style={styles.subheading}>
-        Select items from your inventory to include in the recipe.
-      </Text>
-
-      <Card style={styles.card}>
-        <Card.Title title="Your Inventory" titleStyle={styles.cardTitle} />
-        <Card.Content>
-          {inventoryItems.length > 0 ? (
-            inventoryItems.map((item) => (
-              <View key={item.id} style={styles.itemRow}>
-                <Checkbox.Android
-                  status={selectedItems.includes(item.id) ? 'checked' : 'unchecked'}
-                  onPress={() => handleToggleItem(item.id)}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemDetails}>
-                  ({item.quantity} {item.unit})
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>Your inventory is empty.</Text>
-          )}
-        </Card.Content>
-      </Card>
-
-      <Card style={styles.card}>
-        <Card.Title title="Instructions" titleStyle={styles.cardTitle} />
-        <Card.Content>
-          <TextInput
-            mode="outlined"
-            label="Cooking Instructions"
-            placeholder="e.g., Mix all ingredients and bake at 350°F for 20 minutes."
-            value={instructions}
-            onChangeText={setInstructions}
-            multiline
-            numberOfLines={4}
-            style={styles.textInput}
-            outlineColor={theme.colors.primary}
-          />
-        </Card.Content>
-      </Card>
-
-      <Button
-        mode="contained"
-        onPress={handleCreateRecipe}
-        style={styles.createButton}
-        disabled={selectedItems.length === 0 || !instructions}
-        icon="silverware-fork-knife"
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={{ uri: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAIDAQT/xAAfEAEAAgICAwEBAQAAAAAAAAABEQIDEgQhMVFBYXH/xAAXAQADAQAAAAAAAAAAAAAAAAAAAQID/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwD00iYiZifTExEzE+mJ48zHhHHmY8JgAGAAAAAAAAAABiWWY9sSyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmAD//2Q==' }}
+        style={styles.backgroundGradient}
+        resizeMode="repeat"
       >
-        Create Recipe
-      </Button>
-    </ScrollView>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Recipes</Text>
+          <Text style={styles.headerSubtitle}>Your personal cookbook</Text>
+        </View>
+
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'view' && styles.activeTab]}
+            onPress={() => setActiveTab('view')}
+          >
+            <Text style={[styles.tabText, activeTab === 'view' && styles.activeTabText]}>
+              My Recipes
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'add' && styles.activeTab]}
+            onPress={() => setActiveTab('add')}
+          >
+            <Text style={[styles.tabText, activeTab === 'add' && styles.activeTabText]}>
+              Add New Recipe
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {activeTab === 'view' ? (
+          <>
+            <View style={styles.searchContainer}>
+              <Searchbar
+                placeholder="Search recipes..."
+                onChangeText={setSearchQuery}
+                value={searchQuery}
+                style={styles.searchBar}
+                iconColor="#5D4037"
+                inputStyle={styles.searchInput}
+              />
+            </View>
+            <ScrollView
+              style={styles.recipeList}
+              contentContainerStyle={styles.recipeListContent}
+            >
+              {filteredRecipes.map(renderRecipeCard)}
+            </ScrollView>
+          </>
+        ) : (
+          <AddRecipe onRecipeCreated={() => setActiveTab('view')} />
+        )}
+      </ImageBackground>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F8E9',
+    backgroundColor: '#5D4037',
   },
-  contentContainer: {
-    padding: 16,
-  },
-  centered: {
+  backgroundGradient: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F1F8E9',
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#2E7D32',
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
   },
-  heading: {
-    fontSize: 26,
+  headerTitle: {
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 8,
-    textAlign: 'center',
+    color: '#F5EFE0',
+    fontFamily: 'serif',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
-  subheading: {
+  headerSubtitle: {
     fontSize: 16,
-    color: '#558B2F',
-    marginBottom: 24,
-    textAlign: 'center',
+    color: '#E8E0D0',
+    opacity: 0.9,
   },
-  card: {
-    marginBottom: 20,
-    borderRadius: 12,
-    elevation: 2,
-  },
-  cardTitle: {
-    color: '#2E7D32',
-    fontWeight: '600',
-  },
-  itemRow: {
+  tabContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    justifyContent: 'center',
+    marginVertical: 16,
+    backgroundColor: 'rgba(245, 239, 224, 0.8)',
+    borderRadius: 30,
+    marginHorizontal: 20,
+    overflow: 'hidden',
   },
-  itemName: {
+  tab: {
     flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#8A655A',
+  },
+  tabText: {
     fontSize: 16,
-    marginLeft: 8,
+    fontWeight: '600',
+    color: '#5D4037',
   },
-  itemDetails: {
-    fontSize: 14,
-    color: '#757575',
+  activeTabText: {
+    color: '#F5EFE0',
   },
-  emptyText: {
-    textAlign: 'center',
-    padding: 16,
-    color: '#757575',
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
-  textInput: {
-    backgroundColor: 'white',
+  searchBar: {
+    backgroundColor: 'rgba(245, 239, 224, 0.9)',
+    elevation: 2,
+    borderRadius: 30,
+    marginBottom: 10
   },
-  createButton: {
-    marginTop: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  searchInput: {
+    color: '#5D4037',
+  },
+  recipeList: {
+    flex: 1,
+  },
+  recipeListContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  recipeCard: {
+    marginBottom: 16,
+    backgroundColor: 'rgba(245, 239, 224, 0.95)',
+    borderRadius: 12,
+    elevation: 3,
+  },
+  recipeTitle: {
+    color: '#5D4037',
+    fontWeight: 'bold',
+    fontFamily: 'serif',
+  },
+  recipeDescription: {
+    marginBottom: 12,
+    color: '#8A655A',
+  },
+  ingredientList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  ingredientText: {
+    backgroundColor: 'rgba(138, 101, 90, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+    color: '#5D4037',
+    fontSize: 12,
+    overflow: 'hidden',
   },
 });
