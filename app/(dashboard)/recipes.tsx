@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,49 +7,110 @@ import {
   ImageBackground,
   TouchableOpacity,
 } from 'react-native';
-import { Text, Searchbar, Card } from 'react-native-paper';
+import { Text, Searchbar, Card, IconButton } from 'react-native-paper';
 import AddRecipe from '@/components/AddRecipe';
+import { supabase } from '@/utils/supabase';
+import RecipeOverviewModal from '@/components/RecipeOverviewModal';
 
-// Mock data for recipes - replace with your actual data fetching
-const mockRecipes = [
-  {
-    id: '1',
-    name: 'Classic Spaghetti Bolognese',
-    description: 'A rich and hearty pasta dish that is a true family favorite.',
-    ingredients: ['Spaghetti', 'Ground Beef', 'Tomato Sauce', 'Onion', 'Garlic'],
-  },
-  {
-    id: '2',
-    name: 'Chicken & Veggie Stir-fry',
-    description: 'A quick, healthy, and colorful stir-fry, perfect for a weeknight meal.',
-    ingredients: ['Chicken Breast', 'Broccoli', 'Bell Peppers', 'Soy Sauce', 'Ginger'],
-  },
-  {
-    id: '3',
-    name: 'Lentil Soup',
-    description: 'A nourishing and flavorful soup, great for a cozy day.',
-    ingredients: ['Lentils', 'Carrots', 'Celery', 'Vegetable Broth', 'Spices'],
-  },
-];
+type Recipe = {
+  recipeId: string;
+  recipeName: string;
+  recipeDescription: string;
+  recipeDifficulty: string;
+  timeEstimate: string;
+  recipeIngredients: {
+    name: string,
+    amount: string
+  }[];
+  recipeSteps: {
+    step: number;
+    description: string;
+  }[];
+};
+
 
 export default function RecipesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [activeTab, setActiveTab] = useState('view'); // 'view' or 'add'
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
-  const filteredRecipes = mockRecipes.filter((recipe) =>
-    recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const fetchItems = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) {
+      const { data, error } = await supabase
+        .from("recipes")
+        .select("*")
+        .eq("user_id", session.user.id);
+
+      if (error) {
+        console.error("Error fetching items:", error);
+      } else if (data) {
+        const formattedRecipes: Recipe[] = data.map((recipe: any) => ({
+          recipeId: recipe.id.toString(),
+          recipeName: recipe.recipe_name,
+          recipeDescription: recipe.recipe_description,
+          recipeDifficulty: recipe.recipe_difficulty,
+          timeEstimate: recipe.time_estimate,
+          recipeIngredients: recipe.recipe_ingredients.map((ingredient: any) => ({
+            name: ingredient.name,
+            amount: ingredient.amount
+          })),
+          recipeSteps: recipe.recipe_steps.map((step: any) => ({
+            step: step.stepNumber,
+            description: step.stepDescription
+          }))
+        }));
+        setRecipes(formattedRecipes);
+        console.log(formattedRecipes[0].recipeSteps);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+    const subscription = supabase
+      .channel("recipe-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "recipes" },
+        () => fetchItems()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (selectedRecipe && selectedRecipe.recipeId === id) {
+      setSelectedRecipe(null);
+    }
+    const { error } = await supabase.from("recipes").delete().eq("id", id);
+    if (!error) fetchItems(); // refresh the list
+  };
+
+  const filteredRecipes = recipes.filter((recipe) =>
+    recipe.recipeName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderRecipeCard = (recipe) => (
-    <TouchableOpacity>
-      <Card key={recipe.id} style={styles.recipeCard}>
-        <Card.Title title={recipe.name} titleStyle={styles.recipeTitle} />
+  const renderRecipeCard = (recipe: Recipe) => (
+    <TouchableOpacity onPress={() => setSelectedRecipe(recipe)}>
+      <Card key={recipe.recipeId} style={styles.recipeCard}>
+        <Card.Title
+          title={recipe.recipeName}
+          titleStyle={styles.recipeTitle}
+          right={(props) => <IconButton {...props} icon="close" onPress={() => handleDelete(recipe.recipeId)} />}
+        />
         <Card.Content>
-          <Text style={styles.recipeDescription}>{recipe.description}</Text>
+          <Text style={styles.recipeDescription}>{recipe.recipeDescription}</Text>
           <View style={styles.ingredientList}>
-            {recipe.ingredients.map((ing, index) => (
+            {recipe.recipeIngredients.map((ing, index) => (
               <Text key={index} style={styles.ingredientText}>
-                {ing}
+                {ing.name}
               </Text>
             ))}
           </View>
@@ -109,8 +170,12 @@ export default function RecipesScreen() {
             </ScrollView>
           </>
         ) : (
-          <AddRecipe onRecipeCreated={() => setActiveTab('view')} />
+          <AddRecipe onRecipeCreated={() => {
+            fetchItems();
+            setActiveTab('view');
+          }} />
         )}
+        <RecipeOverviewModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
       </ImageBackground>
     </SafeAreaView>
   );

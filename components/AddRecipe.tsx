@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { supabase } from '../utils/supabase';
+import { generateRecipe } from '@/utils/generateRecipe';
 
 type InventoryItem = {
   id: string;
@@ -26,7 +27,7 @@ type Props = {
 
 export default function AddRecipe({ onRecipeCreated }: Props) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<InventoryItem[]>([]);
   const [instructions, setInstructions] = useState('');
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
@@ -67,11 +68,49 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
     fetchInventory();
   }, []);
 
-  const handleToggleItem = (id: string) => {
-    setSelectedItems((prev) =>
-      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
-    );
+  const handleToggleItem = (item: InventoryItem) => {
+    setSelectedItems((prev) => {
+      const exists = prev.some((selected) => selected.id === item.id);
+      if (exists) {
+        // Remove item by filtering out the one with the same id
+        return prev.filter((selected) => selected.id !== item.id);
+      } else {
+        // Add the new item
+        return [...prev, item];
+      }
+    });
   };
+
+  const createRecipe = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) throw new Error("User not found");
+    const userId = session.user.id;
+    try {
+      setLoading(true);
+      const parsedRecipe = await generateRecipe(selectedItems, userId, instructions);
+      const itemToSave = {
+        user_id: userId,
+        recipe_name: parsedRecipe.recipeName,
+        recipe_description: parsedRecipe.recipeDescription,
+        recipe_ingredients: parsedRecipe.ingredients,
+        recipe_steps: parsedRecipe.recipeSteps,
+        time_estimate: parsedRecipe.timeEstimate,
+        recipe_difficulty: parsedRecipe.recipeDifficulty
+      }
+      if (parsedRecipe) {
+        const { data, error } = await supabase
+          .from('recipes')
+          .insert([itemToSave])
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to create recipe.");
+      console.log(error)
+    } finally {
+      setLoading(false);
+      onRecipeCreated();
+      console.log("Finished")
+    }
+  }
 
   const handleCreateRecipe = () => {
     console.log("Creating recipe with the following data:");
@@ -88,7 +127,7 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator animating={true} size="large" color="#8A655A" />
-        <Text style={styles.loadingText}>Loading Inventory...</Text>
+        <Text style={styles.loadingText}>Loading</Text>
       </View>
     );
   }
@@ -110,8 +149,8 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
             inventoryItems.map((item) => (
               <View key={item.id} style={styles.itemRow}>
                 <Checkbox.Android
-                  status={selectedItems.includes(item.id) ? 'checked' : 'unchecked'}
-                  onPress={() => handleToggleItem(item.id)}
+                  status={selectedItems.some((selected) => selected.id === item.id) ? 'checked' : 'unchecked'}
+                  onPress={() => handleToggleItem(item)}
                   color="#8A655A"
                 />
                 <Text style={styles.itemName}>{item.name}</Text>
@@ -146,7 +185,7 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
 
       <Button
         mode="contained"
-        onPress={handleCreateRecipe}
+        onPress={() => createRecipe()}
         style={styles.createButton}
         disabled={selectedItems.length === 0 || !instructions}
         icon="silverware-fork-knife"
