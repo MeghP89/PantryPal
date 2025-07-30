@@ -46,7 +46,6 @@ type NutritionalItem = {
     | "Seasonings"
     | "Misc";
   CaloriesPerServing: number;
-  CalorieUnit: string;
   ItemQuantity: number;
   NutritionalInfo: {
     NutrientName: string;
@@ -102,7 +101,6 @@ export default function NutritionalItemsScreen() {
           TotalServings: item.total_servings,
           ItemCategory: item.item_category,
           CaloriesPerServing: item.calories_per_serving,
-          CalorieUnit: item.calorie_unit,
           ItemQuantity: item.item_quantity,
           NutritionalInfo: item.nutritional_info.map((nutrient: any) => ({
             NutrientName: nutrient.nutrient_name,
@@ -229,7 +227,7 @@ export default function NutritionalItemsScreen() {
                   </View>
                   <View style={styles.servingDetail}>
                     <Text style={styles.servingLabel}>Calories</Text>
-                    <Text style={styles.calorieValue}>{item.CaloriesPerServing} {item.CalorieUnit}</Text>
+                    <Text style={styles.calorieValue}>{item.CaloriesPerServing} cal</Text>
                   </View>
                 </View>
               </Card.Content>
@@ -459,6 +457,13 @@ const styles = StyleSheet.create({
   },
   servingDetail: {
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: "#f9f9f9",
+    margin: 4,
   },
   servingLabel: {
     fontSize: 12,

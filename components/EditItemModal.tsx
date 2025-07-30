@@ -41,7 +41,6 @@ type NutritionalItem = {
       | "Seasonings"
       | "Misc";
     CaloriesPerServing: number;
-    CalorieUnit: string;
     ItemQuantity: number;
     NutritionalInfo: {
       NutrientName: string;
@@ -105,7 +104,6 @@ export default function EditItemModal({ itemData, onClear }: Props) {
         amount_per_serving: item.AmountPerServing,
         total_servings: item.TotalServings,
         calories_per_serving: item.CaloriesPerServing,
-        calorie_unit: item.CalorieUnit,
         item_category: item.ItemCategory,
         item_quantity: item.ItemQuantity,
       };

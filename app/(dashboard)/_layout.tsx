@@ -31,7 +31,7 @@ export default function Layout() {
             fontWeight: '600',
           },
           header: () =>
-            route.name !== 'profile' ? <ProfileHeader /> : undefined,
+            undefined
         }
       }}
     />

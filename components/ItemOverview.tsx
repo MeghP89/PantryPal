@@ -33,7 +33,6 @@ type NutritionalItem = {
     | "Seasonings"
     | "Misc";
   CaloriesPerServing: number;
-  CalorieUnit: string;
   ItemQuantity: number;
   NutritionalInfo: {
     NutrientName: string;

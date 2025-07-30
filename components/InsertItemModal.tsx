@@ -42,7 +42,6 @@ type ResponseSchema = {
       | "Seasonings"
       | "Misc";
     CaloriesPerServing: number;
-    CalorieUnit: string;
     NutritionalInfo: {
       NutrientName: string;
       NutrientAmount: number;
@@ -65,7 +64,6 @@ const defaultItem: ResponseSchema = {
     TotalServings: 0,
     ItemCategory: 'Misc',
     CaloriesPerServing: 0,
-    CalorieUnit: 'kcal',
     NutritionalInfo: [],
     ItemQuantity: 1,
   },
@@ -184,7 +182,6 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
         amount_per_serving: item.NutritionalItem.AmountPerServing,
         total_servings: item.NutritionalItem.TotalServings,
         calories_per_serving: item.NutritionalItem.CaloriesPerServing,
-        calorie_unit: item.NutritionalItem.CalorieUnit,
         item_category: item.NutritionalItem.ItemCategory,
         item_quantity: item.NutritionalItem.ItemQuantity,
       };
