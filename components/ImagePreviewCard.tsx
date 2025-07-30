@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { extractNutritionalInfoFromLabel, extractBatchNutritionalInfoFromLabel } from '../utils/readReceipt';
+import { extractNutritionalInfoFromLabel, extractBatchNutritionalInfoFromLabel } from '../utils/readNutritionalLabel';
 import InsertItemModal from './InsertItemModal';
 import LoadingComponent from './LoadingComponent';
 import BatchInsertModal from './BatchInsertModal';
