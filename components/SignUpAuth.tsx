@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, StyleSheet, View, AppState, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert, StyleSheet, View, AppState } from 'react-native';
 import { supabase } from '../utils/supabase';
-import { Button, TextInput, Card } from 'react-native-paper';
+import { Button, TextInput, Card, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 
 function validatePassword(password: string) {
@@ -25,6 +25,7 @@ export default function SignUpAuth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -80,14 +81,20 @@ export default function SignUpAuth() {
 
     if (!session) {
       Alert.alert('Success!', 'Please check your inbox for email verification.');
-      router.push('/(signup)/login');
+      router.replace('/(signup)/login');
     }
-    
+
     setLoading(false);
   }
 
   return (
     <Card style={styles.formCard}>
+      <Card.Title
+        title="Create Account"
+        subtitle="Join us today!"
+        titleStyle={styles.cardTitle}
+        subtitleStyle={styles.cardSubtitle}
+      />
       <Card.Content>
         <TextInput
           label="Username"
@@ -117,12 +124,18 @@ export default function SignUpAuth() {
           mode="outlined"
           onChangeText={setPassword}
           value={password}
-          secureTextEntry
+          secureTextEntry={!passwordVisible}
           placeholder="Create a strong password"
           autoCapitalize="none"
           style={styles.input}
           outlineColor="#8A655A"
           activeOutlineColor="#5D4037"
+          right={
+            <TextInput.Icon
+              icon={passwordVisible ? 'eye-off' : 'eye'}
+              onPress={() => setPasswordVisible(!passwordVisible)}
+            />
+          }
         />
         <Button
           mode="contained"
@@ -135,6 +148,16 @@ export default function SignUpAuth() {
         >
           Create Account
         </Button>
+        <View style={styles.switchScreenContainer}>
+          <Text style={styles.switchScreenText}>Already have an account?</Text>
+          <Button
+            mode="text"
+            onPress={() => router.replace('/(signup)/login')}
+            labelStyle={styles.switchScreenButton}
+          >
+            Log In
+          </Button>
+        </View>
       </Card.Content>
     </Card>
   );
@@ -149,6 +172,18 @@ const styles = StyleSheet.create({
     elevation: 3,
     paddingVertical: 16,
   },
+  cardTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#5D4037',
+    textAlign: 'center',
+  },
+  cardSubtitle: {
+    fontSize: 16,
+    color: '#5D4037',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   input: {
     marginBottom: 16,
     backgroundColor: 'rgba(245, 239, 224, 0.5)',
@@ -162,5 +197,18 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  switchScreenContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  switchScreenText: {
+    color: '#5D4037',
+  },
+  switchScreenButton: {
+    color: '#5D4037',
+    fontWeight: 'bold',
   },
 });

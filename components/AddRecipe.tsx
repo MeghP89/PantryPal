@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import {
   Text,
   Button,
@@ -138,6 +138,11 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
+      <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0} // <- optional, tweak as needed
+      >
       <Text style={styles.subheading}>
         Select ingredients from your pantry and add instructions to create a new recipe.
       </Text>
@@ -193,6 +198,7 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
       >
         Create Recipe
       </Button>
+      </KeyboardAvoidingView>
     </ScrollView>
   );
 }
