@@ -1,15 +1,31 @@
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { View } from 'react-native'
-import ProfileHeader from '../../components/ProfileHeader'
+import { BackHandler } from 'react-native'
+import { useFocusEffect } from 'expo-router'
+import React from 'react'
 
 export default function Layout() {
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        return true
+      }
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      )
+
+      return () => subscription.remove()
+    }, [])
+  )
+
   return (
     <Tabs
       screenOptions={({ route }) => {
         let iconName: keyof typeof Ionicons.glyphMap = 'ellipse-outline'
 
-        if (  route.name === 'profile') iconName = 'person-outline'
+        if (route.name === 'profile') iconName = 'person-outline'
         if (route.name === 'shopping') iconName = 'cart-outline'
         if (route.name === 'inventory') iconName = 'cube-outline'
         if (route.name === 'recipes') iconName = 'book-outline'
@@ -31,8 +47,7 @@ export default function Layout() {
             fontSize: 12,
             fontWeight: '600',
           },
-          header: () =>
-            undefined
+          header: () => undefined,
         }
       }}
     />

@@ -55,22 +55,46 @@ export async function generateRecipe(items: InventoryItem[], userId: string, add
     return existing;
   }
 
-  const itemList = items.map(
+  // Fetch all pantry items for the user
+  const { data: pantryItems, error: pantryError } = await supabase
+    .from('nutritional_items')
+    .select('item_name, item_quantity, serving_unit, amount_per_serving')
+    .eq('userid', userId);
+
+  if (pantryError) {
+    console.error("Failed to fetch pantry:", pantryError);
+    // Not throwing an error, just proceeding without full pantry context if it fails.
+  }
+
+  const pantryListString = pantryItems && pantryItems.length > 0
+    ? pantryItems.map(
+        (item) => `${item.item_name} (available: ${item.item_quantity} quantity, each is ${item.amount_per_serving} ${item.serving_unit})`
+      ).join('\n- ')
+    : 'Pantry information not available or pantry is empty.';
+
+  const selectedItemsList = items.map(
     (item) => `${item.name} (${item.quantity} x ${item.amount}${item.unit})`
   );
-  console.log("Generating new recipe...")
+  
+  console.log("Generating new recipe...");
 
   const prompt = `
-    Using the following pantry items, generate a creative recipe:
-    ${itemList.join(", ")}.
+    You are a creative chef tasked with generating a recipe based on a user's pantry.
 
-    Include:
-    - recipeName: A concise fun title
-    - recipeDescription: A concise description that sells the product
-    - ingredients: List of ingredients that should solely be ingredient name with quantities. It is possible to add some extra ingredients not included to make food better.
-    - recipeSteps: Step-by-step instructions.
+    **Primary Ingredients:**
+    The user has specifically selected the following items to be the star of the dish. These MUST be used.
+    - ${selectedItemsList.join("\n- ")}
 
-    ${additionalInstructions ? `Additional instructions: ${additionalInstructions}` : ""}
+    **Full Pantry List:**
+    Here is a complete list of items in the user's pantry. You can use these to supplement the recipe. Be mindful of the quantities available and try to use what's on hand.
+    - ${pantryListString}
+
+    **Your Task:**
+    Generate a creative recipe that prominently features the **Primary Ingredients**. You may use items from the **Full Pantry List** as needed. It is also acceptable to suggest a small number of common staple ingredients (like salt, pepper, oil, water) that might not be listed.
+
+    **Important:** When listing the ingredients in the final recipe, ensure the names are clear and the amounts are reasonable based on the user's pantry. For example, if the user has "2 eggs", don't create a recipe that requires "4 eggs".
+
+    ${additionalInstructions ? `**Additional Instructions from User:** ${additionalInstructions}` : ""}
   `;
 
   const response = await ai.models.generateContent({
@@ -113,7 +137,7 @@ export async function generateRecipe(items: InventoryItem[], userId: string, add
   if (!response.text) throw new Error("Gemini returned no recipe");
 
   const recipe = JSON.parse(response.text);
-  console.log("Generated new recipe:", recipe.recipeName);
+  console.log("Generated new recipe:", recipe);
   return recipe;
 }
 

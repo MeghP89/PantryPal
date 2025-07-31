@@ -171,6 +171,11 @@ export default function NutritionalItemsScreen() {
     return indexA - indexB;
   });
 
+  const handleDelete = async (id: string) => {
+      const { error } = await supabase.from("nutritional_items").delete().eq("itemid", id);
+      if (!error) fetchItems(); // refresh the list
+  };
+
   const renderNutritionalInfo = (nutrients: NutritionalItem["NutritionalInfo"]) => {
     return nutrients.slice(0, 3).map((nutrient, index) => (
       <Text key={index} style={styles.nutrientText}>
@@ -213,7 +218,8 @@ export default function NutritionalItemsScreen() {
                       {item.ItemCategory}
                     </Chip>
                   </View>
-                  <IconButton icon="pencil" size={20} onPress={() => onEdit(item.id)} style={{backgroundColor: 'rgba(0,0,0,0.05)'}} />
+                  <IconButton icon="pencil" size={20} onPress={() => onEdit(item.id)} style={styles.overviewEditButton} />
+                  <IconButton icon="delete" size={20} onPress={() => handleDelete(item.id)} style={styles.overviewEditButton} key={`delete-btn-${item.id}`} />
                 </View>
 
                 <View style={styles.servingInfo}>
@@ -437,6 +443,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#5D4037",
     marginBottom: 6,
+  },
+  overviewEditButton: {
+    margin: -4,
+    marginLeft: 10,
+    backgroundColor: '#f5f5f5',
   },
   categoryChip: {
     alignSelf: "flex-start",

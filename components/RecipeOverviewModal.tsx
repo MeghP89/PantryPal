@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, Card, IconButton, Chip, Button } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
+import { handleUseRecipe } from '@/utils/useRecipe';
 
 type Recipe = {
   recipeId: string;
@@ -39,8 +40,19 @@ const Section = ({ title, children }) => {
 };
 
 export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewModalProps) {
+  const [loading, setLoading] = useState(false);
+
   if (!recipe) return null;
-  console.log(recipe)
+
+  const onUseRecipe = async () => {
+    if (!recipe) return;
+    setLoading(true);
+    const result = await handleUseRecipe(recipe);
+    if (result.success) {
+      onClose();
+    }
+    setLoading(false);
+  };
 
   return (
     <Modal
@@ -54,7 +66,7 @@ export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewM
           <ScrollView>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{recipe.recipeName}</Text>
-              <IconButton icon="close" size={24} onPress={onClose} style={styles.closeButton} />
+              <IconButton icon="close" size={20} onPress={onClose} style={styles.closeButton} />
             </View>
             <View style={styles.infoChips}>
               <Chip icon="gauge" style={styles.chip}>{recipe.recipeDifficulty}</Chip>
@@ -71,8 +83,6 @@ export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewM
               ))}
             </Section>
             
-
-
             <Section title="Steps">
               {recipe.recipeSteps.map((step, index) => (
                 <View key={index} style={styles.stepItem}>
@@ -82,6 +92,12 @@ export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewM
               ))}
             </Section>
           </ScrollView>
+          <Card.Actions style={styles.actions}>
+            <Button onPress={onClose} disabled={loading}>Close</Button>
+            <Button mode="contained" onPress={onUseRecipe} loading={loading} disabled={loading}>
+              Use Recipe
+            </Button>
+          </Card.Actions>
         </Card>
       </View>
     </Modal>
@@ -94,12 +110,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
-    maxHeight: '100%'
   },
   modalCard: {
     justifyContent: 'center',
     width: '100%',
-    height: '55%',
     maxHeight: '100%',
     backgroundColor: '#F5EFE0',
     borderRadius: 15,
@@ -122,6 +136,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     margin: -8,
+    marginRight: 10
   },
   infoChips: {
     flexDirection: 'row',
@@ -185,5 +200,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8A655A',
     lineHeight: 22,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E8E0D0',
   },
 });

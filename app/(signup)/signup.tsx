@@ -6,9 +6,13 @@ import {
   ScrollView,
   ImageBackground,
   SafeAreaView,
+  View,
 } from 'react-native';
+import { IconButton } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 
 export default function SignUp() {
+  const router = useRouter();
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -16,18 +20,28 @@ export default function SignUp() {
         style={styles.backgroundGradient}
         resizeMode="repeat"
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+        <View style={{ flex: 1 }}>
+          <View style={styles.backButtonContainer}>
+            <IconButton
+              icon="arrow-left"
+              iconColor="#F5EFE0"
+              size={28}
+              onPress={() => router.back()}
+            />
+          </View>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            <SignUpAuth />
-          </ScrollView>
-        </KeyboardAvoidingView>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <SignUpAuth />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -40,6 +54,10 @@ const styles = StyleSheet.create({
   },
   backgroundGradient: {
     flex: 1,
+  },
+  backButtonContainer: {
+    paddingTop: 10,
+    paddingLeft: 10,
   },
   scrollContent: {
     flexGrow: 1,

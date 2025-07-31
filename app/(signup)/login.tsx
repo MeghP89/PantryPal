@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Session } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
+import { IconButton } from 'react-native-paper';
 
 export default function Login() {
   const [session, setSession] = useState<Session | null>(null);
@@ -58,14 +59,24 @@ export default function Login() {
         style={styles.backgroundGradient}
         resizeMode="repeat"
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <LoginAuth />
-          </ScrollView>
-        </KeyboardAvoidingView>
+        <View style={{ flex: 1 }}>
+          <View style={styles.backButtonContainer}>
+            <IconButton
+              icon="arrow-left"
+              iconColor="#F5EFE0"
+              size={28}
+              onPress={() => router.back()}
+            />
+          </View>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              <LoginAuth />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -78,6 +89,10 @@ const styles = StyleSheet.create({
   },
   backgroundGradient: {
     flex: 1,
+  },
+  backButtonContainer: {
+    paddingTop: 10,
+    paddingLeft: 10,
   },
   scrollContent: {
     flexGrow: 1,

@@ -103,7 +103,7 @@ export default function RecipesScreen() {
         <Card.Title
           title={recipe.recipeName}
           titleStyle={styles.recipeTitle}
-          right={(props) => <IconButton {...props} icon="close" onPress={() => handleDelete(recipe.recipeId)} />}
+          right={(props) => <IconButton {...props} icon="delete" onPress={() => handleDelete(recipe.recipeId)} />}
         />
         <Card.Content>
           <Text style={styles.recipeDescription}>{recipe.recipeDescription}</Text>
