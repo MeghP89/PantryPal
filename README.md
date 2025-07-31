@@ -6,7 +6,6 @@
 
 ## ✨ App Preview
 
-*(Add a GIF or screenshots to showcase your app UI. You can use the template below once your images are ready.)*
 
 | Login Screen | Pantry / Inventory | Shopping List |
 | :---: | :---: | :---: |
