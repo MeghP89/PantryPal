@@ -74,7 +74,7 @@ export default function EditItemModal({ itemData, onClear, onFetch}: Props) {
     if (!item.itemName.trim()) newErrors.itemName = "Item name is required.";
     if (!item.ServingUnit.trim()) newErrors.ServingUnit = "Serving unit is required.";
     if (item.AmountPerServing <= 0) newErrors.AmountPerServing = "Must be a positive number.";
-    if (item.ItemQuantity <= 0) newErrors.ItemQuantity = "Must be a positive integer.";
+    if (item.ItemQuantity <= 0) newErrors.ItemQuantity = "Quantity must be greater than 0.";
     if (item.CaloriesPerServing < 0) newErrors.CaloriesPerServing = "Cannot be negative.";
 
     const nutrientErrors: any[] = [];

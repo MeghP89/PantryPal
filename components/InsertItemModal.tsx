@@ -92,7 +92,7 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
     if (!nutritionalItem.itemName.trim()) newErrors.itemName = "Item name is required.";
     if (!nutritionalItem.ServingUnit.trim()) newErrors.ServingUnit = "Serving unit is required.";
     if (nutritionalItem.AmountPerServing <= 0) newErrors.AmountPerServing = "Must be a positive number.";
-    if (nutritionalItem.ItemQuantity <= 0) newErrors.ItemQuantity = "Must be a positive integer.";
+    if (nutritionalItem.ItemQuantity <= 0) newErrors.ItemQuantity = "Quantity must be greater than 0.";
     if (nutritionalItem.CaloriesPerServing < 0) newErrors.CaloriesPerServing = "Cannot be negative.";
 
     const nutrientErrors: any[] = [];
