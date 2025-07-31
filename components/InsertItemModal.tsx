@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import {
   Text,
@@ -16,6 +17,7 @@ import {
   useTheme,
   IconButton,
   Chip,
+  HelperText,
 } from "react-native-paper";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -79,9 +81,40 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
   const [loading, setLoading] = useState(false);
   const [similarItem, setSimilarItem] = useState<{ name: string, id: string, quantity: number } | null>(null);
   const [showSimilarityCheck, setShowSimilarityCheck] = useState(false);
-
+  const [errors, setErrors] = useState<any>({});
 
   const theme = useTheme();
+
+  const validate = () => {
+    const newErrors: any = {};
+    const nutritionalItem = item.NutritionalItem;
+
+    if (!nutritionalItem.itemName.trim()) newErrors.itemName = "Item name is required.";
+    if (!nutritionalItem.ServingUnit.trim()) newErrors.ServingUnit = "Serving unit is required.";
+    if (nutritionalItem.AmountPerServing <= 0) newErrors.AmountPerServing = "Must be a positive number.";
+    if (nutritionalItem.ItemQuantity <= 0) newErrors.ItemQuantity = "Must be a positive integer.";
+    if (nutritionalItem.CaloriesPerServing < 0) newErrors.CaloriesPerServing = "Cannot be negative.";
+
+    const nutrientErrors: any[] = [];
+    nutritionalItem.NutritionalInfo.forEach((nutrient, index) => {
+        const nutrientError: any = {};
+        if (nutrient.NutrientName.trim() || nutrient.NutrientAmount || nutrient.NutrientUnit.trim()) {
+            if (!nutrient.NutrientName.trim()) nutrientError.NutrientName = "Required";
+            if (nutrient.NutrientAmount < 0) nutrientError.NutrientAmount = "Cannot be negative.";
+            if (!nutrient.NutrientUnit.trim()) nutrientError.NutrientUnit = "Required";
+        }
+        if (Object.keys(nutrientError).length > 0) {
+            nutrientErrors[index] = nutrientError;
+        }
+    });
+
+    if (nutrientErrors.some(e => e)) {
+        newErrors.NutritionalInfo = nutrientErrors;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const updateNutrient = (index: number, field: keyof ResponseSchema["NutritionalItem"]["NutritionalInfo"][0], value: string | number) => {
     const updatedNutrients = item.NutritionalItem.NutritionalInfo.map((nutrient, i) =>
@@ -147,6 +180,10 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
   };
 
   const saveItem = async (force = false) => {
+    if (!validate()) {
+      Alert.alert("Validation Error", "Please check the fields for errors.");
+      return;
+    }
     setShowSimilarityCheck(false);
     setLoading(true);
 
@@ -196,14 +233,18 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
       if (data) {
         const item_id = data[0]?.itemid;
         if (item_id && item.NutritionalItem.NutritionalInfo.length > 0) {
-          const nutrientsToInsert = item.NutritionalItem.NutritionalInfo.map(n => ({
-            item_id: item_id,
-            nutrient_name: n.NutrientName,
-            nutrient_amount: n.NutrientAmount,
-            nutrient_unit: n.NutrientUnit,
-          }));
-          const { error: nutrientError } = await supabase.from('nutritional_info').insert(nutrientsToInsert);
-          if (nutrientError) throw nutrientError;
+          const nutrientsToInsert = item.NutritionalItem.NutritionalInfo
+            .filter(n => n.NutrientName.trim() !== "" || n.NutrientAmount !== 0 || n.NutrientUnit.trim() !== 'g')
+            .map(n => ({
+              item_id: item_id,
+              nutrient_name: n.NutrientName,
+              nutrient_amount: n.NutrientAmount,
+              nutrient_unit: n.NutrientUnit,
+            }));
+          if (nutrientsToInsert.length > 0) {
+            const { error: nutrientError } = await supabase.from('nutritional_info').insert(nutrientsToInsert);
+            if (nutrientError) throw nutrientError;
+          }
         }
         console.log("Inserted ID:", item_id);
       }
@@ -211,6 +252,7 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
       onClear();
     } catch (error) {
       console.error("Error saving item:", error);
+      Alert.alert("Error", "Failed to save item.");
       setLoading(false);
       onClear();
     }
@@ -262,7 +304,9 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                     })
                   }
                   style={styles.input}
+                  error={!!errors.itemName}
                 />
+                {!!errors.itemName && <HelperText type="error" visible={!!errors.itemName}>{errors.itemName}</HelperText>}
               </View>
 
               {/* Category Selection */}
@@ -308,7 +352,9 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                       })
                     }
                     style={styles.smallInput}
+                    error={!!errors.AmountPerServing}
                   />
+                  {!!errors.AmountPerServing && <HelperText type="error" visible={!!errors.AmountPerServing}>{errors.AmountPerServing}</HelperText>}
                 </View>
                 <View style={styles.halfWidth}>
                   <Text style={styles.label}>Unit</Text>
@@ -322,7 +368,9 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                       })
                     }
                     style={styles.smallInput}
+                    error={!!errors.ServingUnit}
                   />
+                  {!!errors.ServingUnit && <HelperText type="error" visible={!!errors.ServingUnit}>{errors.ServingUnit}</HelperText>}
                 </View>
               </View>
 
@@ -343,7 +391,9 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                       }))
                   }
                   style={styles.quantityInput}
+                  error={!!errors.ItemQuantity}
                 />
+                {!!errors.ItemQuantity && <HelperText type="error" visible={!!errors.ItemQuantity}>{errors.ItemQuantity}</HelperText>}
               </View>
 
               {/* Calories */}
@@ -363,7 +413,9 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                     })
                   }
                   style={styles.input}
+                  error={!!errors.CaloriesPerServing}
                 />
+                {!!errors.CaloriesPerServing && <HelperText type="error" visible={!!errors.CaloriesPerServing}>{errors.CaloriesPerServing}</HelperText>}
               </View>
 
               {/* Nutritional Info */}
@@ -374,39 +426,49 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                 </View>
 
                 {item.NutritionalItem.NutritionalInfo.map((nutrient, index) => (
-                  <Card key={index} style={styles.nutrientCard}>
-                    <Card.Content style={styles.nutrientContent}>
-                      <TextInput
-                        mode="outlined"
-                        placeholder="Nutrient name"
-                        value={nutrient.NutrientName}
-                        onChangeText={(text) => updateNutrient(index, "NutrientName", text)}
-                        style={styles.nutrientNameInput}
-                      />
-                      <TextInput
-                        mode="outlined"
-                        placeholder="Amount"
-                        keyboardType="numeric"
-                        value={(nutrient.NutrientAmount ?? 0).toString()}
-                        onChangeText={(text) =>
-                          updateNutrient(index, "NutrientAmount", parseFloat(text) || 0)
-                        }
-                        style={styles.nutrientAmountInput}
-                      />
-                      <TextInput
-                        mode="outlined"
-                        placeholder="Unit"
-                        value={nutrient.NutrientUnit}
-                        onChangeText={(text) => updateNutrient(index, "NutrientUnit", text)}
-                        style={styles.nutrientUnitInput}
-                      />
-                      <IconButton
-                        icon="delete"
-                        onPress={() => removeNutrient(index)}
-                        size={20}
-                      />
-                    </Card.Content>
-                  </Card>
+                  <View key={index}>
+                    <Card style={styles.nutrientCard}>
+                      <Card.Content style={styles.nutrientContent}>
+                        <TextInput
+                          mode="outlined"
+                          placeholder="Nutrient name"
+                          value={nutrient.NutrientName}
+                          onChangeText={(text) => updateNutrient(index, "NutrientName", text)}
+                          style={styles.nutrientNameInput}
+                          error={!!errors.NutritionalInfo?.[index]?.NutrientName}
+                        />
+                        <TextInput
+                          mode="outlined"
+                          placeholder="Amount"
+                          keyboardType="numeric"
+                          value={(nutrient.NutrientAmount ?? 0).toString()}
+                          onChangeText={(text) =>
+                            updateNutrient(index, "NutrientAmount", parseFloat(text) || 0)
+                          }
+                          style={styles.nutrientAmountInput}
+                          error={!!errors.NutritionalInfo?.[index]?.NutrientAmount}
+                        />
+                        <TextInput
+                          mode="outlined"
+                          placeholder="Unit"
+                          value={nutrient.NutrientUnit}
+                          onChangeText={(text) => updateNutrient(index, "NutrientUnit", text)}
+                          style={styles.nutrientUnitInput}
+                          error={!!errors.NutritionalInfo?.[index]?.NutrientUnit}
+                        />
+                        <IconButton
+                          icon="delete"
+                          onPress={() => removeNutrient(index)}
+                          size={20}
+                        />
+                      </Card.Content>
+                    </Card>
+                    {errors.NutritionalInfo?.[index] && (
+                      <HelperText type="error" visible={true}>
+                        {Object.values(errors.NutritionalInfo[index]).join(', ')}
+                      </HelperText>
+                    )}
+                  </View>
                 ))}
               </View>
             </ScrollView>
