@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { supabase } from "./supabase";
 
-const ai = new GoogleGenAI({ apiKey: 'AIzaSyAEa_yhtmAibFNwU5hViphAmbV8FPNo6d0' });
+const ai = new GoogleGenAI({ apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY });
 
 type InventoryItem = {
   id: string;

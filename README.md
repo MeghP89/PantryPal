@@ -1,50 +1,65 @@
-# Welcome to your Expo app 👋
+# 🍳 PrepPal — Your AI-Powered Smart Kitchen Assistant
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**PrepPal** is a mobile app that helps you manage your pantry, plan meals, and generate recipes based on your current ingredients — all in one streamlined experience. Designed to reduce food waste and make cooking smarter, easier, and more enjoyable.
 
-## Get started
+---
 
-1. Install dependencies
+## ✨ App Preview
 
-   ```bash
-   npm install
-   ```
+*(Add a GIF or screenshots to showcase your app UI. You can use the template below once your images are ready.)*
 
-2. Start the app
+| Login Screen | Pantry / Inventory | Shopping List |
+| :---: | :---: | :---: |
+| ![Login](assets/screenshots/login.jpeg) | ![Pantry](assets/screenshots/pantry.jpeg) | ![Shopping](assets/screenshots/shopping.jpeg) |
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## 📦 Features
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 🔐 Authentication
+- Secure login and account setup via Supabase Auth.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 📦 Inventory Management
+- **Track Pantry Items:** Add, edit, or delete items with quantity, unit, and expiration details.
+- **Auto-Categorization:** Group items into categories like Produce, Dairy, and Grains.
+- **Nutritional Scanner:** Upload a nutrition label image to auto-fill calories and macros.
 
-## Get a fresh project
+### 🍲 Recipe & Meal Planning
+- **Smart Recipe Generation:** Get recipe ideas using only your on-hand ingredients.
+- **Detailed Recipes:** Includes cook time, difficulty, ingredients, and instructions.
+- **Save to Cookbook:** Bookmark favorite recipes for later.
 
-When you're ready, run:
+### 🛒 Smart Shopping List
+- **Auto-Build Lists:** Add missing ingredients directly from recipe pages.
+- **Organized by Category:** Grouped for in-store convenience.
+- **Estimated Costs:** Add prices and see your total.
+- **Interactive:** Check items off as you shop.
+
+---
+
+## 🛠️ Tech Stack
+
+| Tech | Purpose |
+|------|---------|
+| **React Native + Expo** | Cross-platform mobile development |
+| **TypeScript** | Type-safe development |
+| **React Native Paper** | UI component library (Material Design) |
+| **Expo Router** | File-based navigation system |
+| **Supabase** | Auth, real-time DB, and backend |
+| **.env** | Environment variable config |
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+
+- Node.js v18+
+- npm or yarn
+- Expo Go (on your phone) **OR** Android/iOS emulator
+
+### 2. Clone the Repository
 
 ```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+https://github.com/MeghP89/PrepPal.git
+cd preppal
