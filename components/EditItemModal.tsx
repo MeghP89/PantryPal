@@ -52,9 +52,10 @@ type NutritionalItem = {
 type Props = {
   itemData: NutritionalItem;
   onClear: () => void;
+  onFetch: () => void;
 };
 
-export default function EditItemModal({ itemData, onClear }: Props) {
+export default function EditItemModal({ itemData, onClear, onFetch}: Props) {
   console.log("Item received in EditItemModal:", JSON.stringify(itemData, null, 2));
   const categories = [
     "Produce", "Dairy", "Meat", "Bakery", "Frozen", "Beverages",
@@ -155,6 +156,7 @@ export default function EditItemModal({ itemData, onClear }: Props) {
       console.error("Error saving item:", error);
     } finally {
       console.log("Saved item:", item);
+      onFetch();
       setLoading(false);
       setModalVisible(false);
       onClear()

@@ -9,6 +9,7 @@ export default function Layout() {
       screenOptions={({ route }) => {
         let iconName: keyof typeof Ionicons.glyphMap = 'ellipse-outline'
 
+        if (  route.name === 'profile') iconName = 'person-outline'
         if (route.name === 'shopping') iconName = 'cart-outline'
         if (route.name === 'inventory') iconName = 'cube-outline'
         if (route.name === 'recipes') iconName = 'book-outline'
