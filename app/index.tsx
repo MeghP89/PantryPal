@@ -1,68 +1,54 @@
-import { useRouter } from 'expo-router'
-import { View, Text, StyleSheet } from 'react-native'
-import { Button } from 'react-native-paper'
-import { batchInsertItems } from '@/utils/batchInsertItems'
+import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ImageBackground, SafeAreaView, Image } from 'react-native';
+import { Button } from 'react-native-paper';
 
 export default function Index() {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Welcome</Text>
-        <Text style={styles.subtitle}>Please choose an option to continue</Text>
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={{ uri: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAIDAQT/xAAfEAEAAgICAwEBAQAAAAAAAAABEQIDEgQhMVFBYXH/xAAXAQADAQAAAAAAAAAAAAAAAAAAAQID/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwD00iYiZifTExEzE+mJ48zHhHHmY8JgAGAAAAAAAAAABiWWY9sSyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmAD//2Q==' }}
+        style={styles.backgroundGradient}
+        resizeMode="repeat"
+      >
+        <View style={styles.content}>
+          <Image source={require('../assets/images/icon.png')} style={styles.logo} />
+          <Text style={styles.title}>Smart Kitchen</Text>
+          <Text style={styles.subtitle}>Your personal pantry assistant.</Text>
 
-        <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
-            onPress={() => router.push('/(signup)/signup')}  // navigate programmatically
-            style={styles.loginButton}
-            contentStyle={styles.buttonContent}
-            labelStyle={styles.buttonText}
-          >
-            Sign Up
-          </Button>
-
-          <Button
-            mode="contained"
-            onPress={() => router.push('/(dashboard)/inventory')}  // navigate programmatically
-            style={styles.loginButton}
-            contentStyle={styles.buttonContent}
-            labelStyle={styles.buttonText}
-          >
-            Camera
-          </Button>
-
-          <Button
-            mode="outlined"
-            onPress={() => router.push('/(signup)/login')}  // navigate programmatically
-            style={styles.signupButton}
-            contentStyle={styles.buttonContent}
-            labelStyle={[styles.buttonText, styles.signupButtonText]}
-          >
-            Login
-          </Button>
-
-          <Button
-            mode="outlined"
-            onPress={batchInsertItems}  // navigate programmatically
-            style={styles.signupButton}
-            contentStyle={styles.buttonContent}
-            labelStyle={[styles.buttonText, styles.signupButtonText]}
-          >
-            test
-          </Button>
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="contained"
+              onPress={() => router.push('/(signup)/login')}
+              style={styles.button}
+              labelStyle={styles.buttonText}
+              buttonColor="#5D4037"
+            >
+              Login
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={() => router.push('/(signup)/signup')}
+              style={[styles.button, styles.signupButton]}
+              labelStyle={styles.signupButtonText}
+            >
+              Create Account
+            </Button>
+          </View>
         </View>
-      </View>
-    </View>
-  )
+      </ImageBackground>
+    </SafeAreaView>
+  );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F6',  // light creamy/off-white like a clean kitchen
+    backgroundColor: '#5D4037',
+  },
+  backgroundGradient: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -70,47 +56,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+    borderRadius: 20,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 42,
     fontWeight: 'bold',
-    color: '#2E7D32',  // deep green like fresh leaves
-    marginBottom: 10,
-    fontFamily: 'Helvetica', // simple, clean font
+    color: '#F5EFE0',
+    fontFamily: 'serif',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#4CAF50', // softer green for secondary text
-    marginBottom: 40,
+    fontSize: 18,
+    color: '#E8E0D0',
+    marginBottom: 60,
     textAlign: 'center',
   },
   buttonContainer: {
-    width: 300,
-    alignSelf: 'center',
-  },
-  buttonContent: {
-    paddingVertical: 15,
+    width: '80%',
+    maxWidth: 300,
   },
   button: {
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  loginButton: {
-    backgroundColor: '#81C784', // lighter fresh green (like lettuce)
-    marginBottom: 20,
+    marginBottom: 16,
+    paddingVertical: 8,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#5D4037',
   },
   signupButton: {
+    borderColor: '#F5EFE0',
     backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#388E3C', // darker forest green border
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    fontWeight: 'bold',
   },
   signupButtonText: {
-    color: '#388E3C',
+    color: '#F5EFE0',
   },
-})
+});

@@ -1,60 +1,69 @@
-import { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
-import { supabase } from '../../utils/supabase'
-import { Session } from '@supabase/supabase-js'
-import Account from '../../components/Account'
+import { useEffect, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator, ImageBackground, SafeAreaView } from 'react-native';
+import { supabase } from '../../utils/supabase';
+import { Session } from '@supabase/supabase-js';
+import Account from '../../components/Account';
 
 export default function ProfileScreen() {
-  const [session, setSession] = useState<Session | null>(null)
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-    })
+    const fetchSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+      } catch (error) {
+        console.error('Failed to fetch session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Listen for session changes
+    fetchSession();
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
+      setSession(session);
+    });
 
     return () => {
-      listener?.subscription.unsubscribe()
-    }
-  }, [])
+      listener?.subscription.unsubscribe();
+    };
+  }, []);
 
-  if (!session) {
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.heading}>Loading...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#F5EFE0" />
       </View>
-    )
+    );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-        <Text style={styles.heading}>Profile</Text>
-        <Account key={session.user.id} session={session} />
-      </View>
-    </ScrollView>
-  )
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={{ uri: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAIDAQT/xAAfEAEAAgICAwEBAQAAAAAAAAABEQIDEgQhMVFBYXH/xAAXAQADAQAAAAAAAAAAAAAAAAAAAQID/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwD00iYiZifTExEzE+mJ48zHhHHmY8JgAGAAAAAAAAAABiWWY9sSyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmAD//2Q==' }}
+        style={styles.backgroundGradient}
+        resizeMode="repeat"
+      >
+        {session && <Account key={session.user.id} session={session} />}
+      </ImageBackground>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    backgroundColor: '#F1F8E9',
-  },
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: '#5D4037',
+  },
+  backgroundGradient: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    backgroundColor: '#5D4037',
   },
-  heading: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-})
+});

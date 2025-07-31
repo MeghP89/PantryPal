@@ -233,7 +233,7 @@ export default function NutritionalItemsScreen() {
               </Card.Content>
             </LinearGradient>
           </Card>
-          {edit === item.id && <EditItemModal itemData={item} onClear={() => onEdit(null)} />}
+          {edit === item.id && <EditItemModal itemData={item} onClear={() => onEdit(null)} onFetch={() => fetchItems()} />}
         </TouchableOpacity>
       </View>
     );
