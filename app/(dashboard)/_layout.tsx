@@ -3,7 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { BackHandler } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import React from 'react';
-import { Provider as PaperProvider } from 'react-native-paper'; // Import PaperProvider
+import { Provider as PaperProvider } from 'react-native-paper';
+import { theme } from '../../utils/theme'; // Import the custom theme
 
 export default function Layout() {
   useFocusEffect(
@@ -22,7 +23,7 @@ export default function Layout() {
   );
 
   return (
-    <PaperProvider> {/* Wrap Tabs with PaperProvider */}
+    <PaperProvider theme={theme}>
       <Tabs
         screenOptions={({ route }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'ellipse-outline';
@@ -38,11 +39,11 @@ export default function Layout() {
             ),
             tabBarLabel:
               route.name.charAt(0).toUpperCase() + route.name.slice(1),
-            tabBarActiveTintColor: '#2E7D32', // Fresh green
-            tabBarInactiveTintColor: '#81C784', // Light green
+            tabBarActiveTintColor: theme.colors.tabBarActive,
+            tabBarInactiveTintColor: theme.colors.tabBarInactive,
             tabBarStyle: {
-              backgroundColor: '#F1F8E9', // Very light green background
-              borderTopColor: '#A5D6A7', // Soft green border
+              backgroundColor: theme.colors.tabBarBackground,
+              borderTopColor: theme.colors.borderColor,
               borderTopWidth: 1,
             },
             tabBarLabelStyle: {

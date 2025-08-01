@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator, Modal, ScrollView, Dimensions, BackHandler } from 'react-native';
-import { Text, Button, Card, TextInput, List, Chip, Divider, IconButton, Portal, Snackbar } from 'react-native-paper';
+import { Text, Button, Card, TextInput, List, Chip, Divider, IconButton, Portal, Snackbar, useTheme } from 'react-native-paper';
 import { controlShoppingList } from '../utils/shoppingListControlAgent';
 import { handleUseRecipe, Recipe, MissingItem } from '../utils/useRecipe';
+import { theme as appTheme } from '../utils/theme';
 
 interface MissingItemsModalProps {
   visible: boolean;
@@ -15,6 +16,9 @@ type ModalStep = 'loading' | 'initial' | 'contextNeeded' | 'final';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function MissingItemsModal({ visible, onClose, recipe }: MissingItemsModalProps) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
+
   const [step, setStep] = useState<ModalStep>('loading');
   const [missingItems, setMissingItems] = useState<MissingItem[]>([]);
   const [aiResponse, setAiResponse] = useState('');
@@ -177,7 +181,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
 
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator animating={true} size="large" />
+      <ActivityIndicator animating={true} size="large" color={theme.colors.primary} />
       <Text style={styles.loadingText}>Checking ingredients...</Text>
     </View>
   );
@@ -211,7 +215,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
                 <List.Icon 
                   {...props} 
                   icon={item.reason === 'missing' ? 'minus-circle' : 'alert-circle-outline'}
-                  color={item.reason === 'missing' ? '#f44336' : '#ff9800'}
+                  color={item.reason === 'missing' ? theme.colors.error : theme.colors.accent}
                 />
               )}
               titleStyle={styles.itemTitle}
@@ -392,7 +396,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'center',
@@ -403,8 +407,9 @@ const styles = StyleSheet.create({
   modalCard: {
     width: Math.min(SCREEN_WIDTH - 40, 400),
     maxHeight: SCREEN_HEIGHT * 0.85,
-    borderRadius: 12,
+    borderRadius: theme.roundness,
     elevation: 8,
+    backgroundColor: theme.colors.background,
   },
   scrollContainer: {
     maxHeight: SCREEN_HEIGHT * 0.7,
@@ -423,10 +428,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     flex: 1,
+    color: theme.colors.text,
   },
   subtitle: {
     fontSize: 14,
-    opacity: 0.7,
+    color: theme.colors.secondaryText,
     marginTop: 4,
     paddingHorizontal: 20,
   },
@@ -437,7 +443,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    opacity: 0.7,
+    color: theme.colors.secondaryText,
   },
   statsContainer: {
     paddingHorizontal: 20,
@@ -445,10 +451,12 @@ const styles = StyleSheet.create({
   },
   statsChip: {
     alignSelf: 'flex-start',
+    backgroundColor: theme.colors.surface,
   },
   divider: {
     marginHorizontal: 20,
     marginVertical: 10,
+    backgroundColor: theme.colors.borderColor,
   },
   itemsContainer: {
     paddingHorizontal: 20,
@@ -456,30 +464,35 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     marginBottom: 8,
-    backgroundColor: '#fafafa',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.borderColor,
   },
   itemTitle: {
     fontSize: 16,
     fontWeight: '500',
+    color: theme.colors.text,
   },
   itemDescription: {
     fontSize: 14,
+    color: theme.colors.secondaryText,
   },
   questionCard: {
     marginHorizontal: 20,
     marginBottom: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.borderColor,
   },
   aiQuestion: {
     fontSize: 16,
     lineHeight: 24,
+    color: theme.colors.text,
   },
   input: {
     marginHorizontal: 20,
     marginBottom: 10,
   },
   errorText: {
-    color: '#f44336',
+    color: theme.colors.error,
     fontSize: 12,
     marginHorizontal: 20,
     marginBottom: 10,
@@ -487,11 +500,14 @@ const styles = StyleSheet.create({
   resultCard: {
     marginHorizontal: 20,
     marginBottom: 20,
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.borderColor,
   },
   resultMessage: {
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
+    color: theme.colors.text,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -508,5 +524,6 @@ const styles = StyleSheet.create({
   },
   snackbar: {
     bottom: 100,
+    backgroundColor: theme.colors.accent,
   },
 });
