@@ -29,17 +29,21 @@ const shoppingListControlFunctionDeclaration = {
         description: "An array of unique IDs for bulk deletion of shopping list items. Used only with the 'delete' action.",
       },
       data: {
-        type: Type.OBJECT,
-        description: "A JSON object containing the data for a shopping list item. Required for 'create' and 'update' actions. When updating, only include the fields that need to be changed.",
-        properties: {
-            item_name: { type: Type.STRING, description: "The name of the item. First letter of each word should be uppercase" },
-            quantity: { type: Type.NUMBER, description: "The quantity of the item." },
-            unit: { type: Type.STRING, enum: ['pieces', 'lbs', 'oz', 'cups', 'tbsp', 'tsp', 'gallons', 'liters', 'packages'], description: "The unit of measurement for the item." },
-            category: { type: Type.STRING, enum: ["Produce", "Dairy", "Meat", "Bakery", "Frozen", "Beverages", "Snacks", "Canned Goods", "Condiments", "Grains", "Seasonings", "Misc"], description: "The category of the item. Determine based on item" },
-            priority: { type: Type.STRING, enum: ["low", "medium", "high"], description: "The priority of the item." },
-            notes: { type: Type.STRING, description: "Additional notes about the item." },
-            estimated_price: { type: Type.NUMBER, description: "The estimated price of the item." },
-        }
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          description: "A JSON object containing the data for a shopping list item. Required for 'create' and 'update' actions. When updating, only include the fields that need to be changed.",
+          properties: {
+              item_name: { type: Type.STRING, description: "The name of the item. First letter of each word should be uppercase" },
+              quantity: { type: Type.NUMBER, description: "The quantity of the item." },
+              unit: { type: Type.STRING, enum: ['pieces', 'lbs', 'oz', 'cups', 'tbsp', 'tsp', 'gallons', 'liters', 'packages'], description: "The unit of measurement for the item." },
+              category: { type: Type.STRING, enum: ["Produce", "Dairy", "Meat", "Bakery", "Frozen", "Beverages", "Snacks", "Canned Goods", "Condiments", "Grains", "Seasonings", "Misc"], description: "The category of the item. Determine based on item" },
+              priority: { type: Type.STRING, enum: ["low", "medium", "high"], description: "The priority of the item." },
+              notes: { type: Type.STRING, description: "Additional notes about the item." },
+              estimated_price: { type: Type.NUMBER, description: "The estimated price of the item." },
+          }
+        },
+        description: 'Items to be updated or inserted'
       },
     },
     required: ['action'],
@@ -54,7 +58,7 @@ type ShoppingListData = {
   quantity?: number;
   unit?: 'pieces' | 'lbs' | 'oz' | 'cups' | 'tbsp' | 'tsp' | 'gallons' | 'liters' | 'packages';
   category?: "Produce" | "Dairy" | "Meat" | "Bakery" | "Frozen" | "Beverages" | "Snacks" | "Canned Goods" | "Condiments" | "Grains" | "Seasonings" | "Misc";
-  priority?: "Low" | "Medium" | "High";
+  priority?: "low" | "medium" | "high";
   notes?: string;
   estimated_price?: number;
 };
@@ -63,7 +67,7 @@ type ShoppingListControlParams = {
   action: 'create' | 'update' | 'delete';
   id?: string;
   ids?: string[];
-  data?: ShoppingListData;
+  data?: ShoppingListData[];
 };
 
 /**
@@ -80,28 +84,31 @@ const shoppingListControl = async ({ action, id, ids, data }: ShoppingListContro
     let response;
     switch (action) {
       case 'create':
-        if (!data) return { error: "Data is required for create action." };
-        const recordToCreate = { ...data, user_id: userId };
-        response = await supabase.from(database).insert(recordToCreate).select();
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          return { error: "Data must be a non-empty array for create action." };
+        }
+        const recordsToCreate = data.map(item => ({ ...item, user_id: userId }));
+        response = await supabase.from(database).insert(recordsToCreate).select();
         break;
 
       case 'update':
-        if (!id || !data) return { error: "Record ID and data are required for update action." };
-        response = await supabase.from(database).update(data).eq('id', id).eq('userid', userId).select();
+        if (!id || !data || !Array.isArray(data) || data.length !== 1) {
+          return { error: "A single data object and record ID are required for update action." };
+        }
+        response = await supabase.from(database).update(data[0]).eq('id', id).eq('user_id', userId).select();
         break;
 
       case 'delete':
         if (ids && ids.length > 0) {
-          response = await supabase.from(database).delete().in('id', ids).eq('userid', userId);
+          response = await supabase.from(database).delete().in('id', ids).eq('user_id', userId);
         } else if (id) {
-          response = await supabase.from(database).delete().eq('id', id).eq('userid', userId);
+          response = await supabase.from(database).delete().eq('id', id).eq('user_id', userId);
         } else {
           return { error: "Record ID or an array of Record IDs is required for delete action." };
         }
         break;
 
       default:
-        console.log(data)
         return { error: `Invalid action: ${action}` };
     }
 
