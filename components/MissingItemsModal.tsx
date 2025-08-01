@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Modal } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Modal, ScrollView } from 'react-native';
 import { Text, Button, Card, TextInput, List } from 'react-native-paper';
 import { controlShoppingList } from '../utils/shoppingListControlAgent';
 import { handleUseRecipe, Recipe, MissingItem } from '../utils/useRecipe';
@@ -61,7 +61,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
 
     if (!currentPrompt) {
       const itemsString = missingItems.map(item => `${item.name} (${item.reason === 'missing' ? 'missing' : `short by ${item.shortfall}`})`).join(', ');
-      currentPrompt = `Please add the following items to my shopping list: ${itemsString}.`;
+      currentPrompt = `Please add the following items to my shopping list: ${itemsString} using their respective shortfall unit or default to your best guess.`;
     }
 
     try {
@@ -96,7 +96,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
     switch (step) {
       case 'initial':
         return (
-          <>
+          <ScrollView>
             <Card.Title title="Missing Ingredients" subtitle={`For ${recipe?.recipeName}`} />
             <Card.Content>
               <List.Section>
@@ -116,12 +116,12 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
                 Add to List
               </Button>
             </Card.Actions>
-          </>
+          </ScrollView>
         );
 
       case 'contextNeeded':
         return (
-          <>
+          <ScrollView>
             <Card.Title title="AI Needs More Information" />
             <Card.Content>
               <Text style={styles.aiQuestion}>{aiResponse}</Text>
@@ -140,12 +140,12 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
                 Submit
               </Button>
             </Card.Actions>
-          </>
+          </ScrollView>
         );
 
       case 'final':
         return (
-          <>
+          <ScrollView>
             <Card.Title title={resultMessage.startsWith('Error') ? "Error" : "Success"} />
             <Card.Content>
               <Text>{resultMessage}</Text>
@@ -153,7 +153,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
             <Card.Actions>
               <Button mode="contained" onPress={onClose}>Close</Button>
             </Card.Actions>
-          </>
+          </ScrollView>
         );
 
       default:
@@ -162,18 +162,20 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
   };
 
   return (
-    <Modal
-      transparent={true}
-      animationType="slide"
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={styles.centeredView}>
-        <Card style={styles.card}>
-          {renderContent()}
-        </Card>
-      </View>
-    </Modal>
+    <ScrollView>
+      <Modal
+        transparent={true}
+        animationType="slide"
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.centeredView}>
+          <Card style={styles.card}>
+            {renderContent()}
+          </Card>
+        </View>
+      </Modal>
+    </ScrollView>
   );
 }
 
