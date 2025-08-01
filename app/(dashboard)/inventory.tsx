@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ImageBackground,
+  RefreshControl,
 } from "react-native";
 import {
   Text,
@@ -78,9 +79,10 @@ export default function NutritionalItemsScreen() {
   const [overviewItemId, setOverviewItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const theme = useTheme();
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -111,7 +113,12 @@ export default function NutritionalItemsScreen() {
         setItems(formattedItems);
       }
     }
-  };
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchItems().then(() => setRefreshing(false));
+  }, [fetchItems]);
 
   useEffect(() => {
     fetchItems();
@@ -132,7 +139,7 @@ export default function NutritionalItemsScreen() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [fetchItems]);
 
   const categories = [
     "All", "Produce", "Dairy", "Meat", "Bakery", "Frozen", "Beverages",
@@ -295,6 +302,9 @@ export default function NutritionalItemsScreen() {
             style={styles.itemsList}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.itemsContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
+            }
           >
             {sortedCategories.map((category) => (
               <View key={category} style={styles.shelfContainer}>

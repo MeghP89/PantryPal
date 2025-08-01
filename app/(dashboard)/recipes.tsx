@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,8 +6,9 @@ import {
   SafeAreaView,
   ImageBackground,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
-import { Text, Searchbar, Card, IconButton } from 'react-native-paper';
+import { Text, Searchbar, Card, IconButton, useTheme } from 'react-native-paper';
 import AddRecipe from '@/components/AddRecipe';
 import { supabase } from '@/utils/supabase';
 import RecipeOverviewModal from '@/components/RecipeOverviewModal';
@@ -34,8 +35,10 @@ export default function RecipesScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [activeTab, setActiveTab] = useState('view'); // 'view' or 'add'
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const theme = useTheme();
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -67,7 +70,12 @@ export default function RecipesScreen() {
         console.log(formattedRecipes[0].recipeSteps);
       }
     }
-  };
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchItems().then(() => setRefreshing(false));
+  }, [fetchItems]);
 
   useEffect(() => {
     fetchItems();
@@ -83,7 +91,7 @@ export default function RecipesScreen() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [fetchItems]);
 
   const handleDelete = async (id: string) => {
     if (selectedRecipe && selectedRecipe.recipeId === id) {
@@ -165,6 +173,9 @@ export default function RecipesScreen() {
             <ScrollView
               style={styles.recipeList}
               contentContainerStyle={styles.recipeListContent}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
+              }
             >
               {filteredRecipes.map(renderRecipeCard)}
             </ScrollView>

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import {
   Text,
@@ -17,7 +18,7 @@ import {
   Chip,
   TextInput,
   Button,
-  FAB,
+  useTheme,
 } from 'react-native-paper';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
@@ -82,6 +83,8 @@ export default function ShoppingListScreen() {
   const [activeTab, setActiveTab] = useState('list'); // 'list' or 'add'
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const theme = useTheme();
   
   // Add item form state
   const [newItem, setNewItem] = useState({
@@ -123,6 +126,11 @@ export default function ShoppingListScreen() {
       }
     }
   }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchShoppingItems().then(() => setRefreshing(false));
+  }, [fetchShoppingItems]);
 
   useFocusEffect(
     useCallback(() => {
@@ -536,6 +544,9 @@ export default function ShoppingListScreen() {
               <ScrollView
                 style={styles.itemsList}
                 contentContainerStyle={styles.itemsListContent}
+                refreshControl={
+                  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
+                }
               >
                 {Object.keys(groupedItems).length === 0 ? (
                   <Card style={styles.emptyCard}>

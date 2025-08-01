@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, ImageBackground, SafeAreaView } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, ActivityIndicator, ImageBackground, SafeAreaView, ScrollView, RefreshControl } from 'react-native';
+import { useTheme } from 'react-native-paper';
 import { supabase } from '../../utils/supabase';
 import { Session } from '@supabase/supabase-js';
 import Account from '../../components/Account';
@@ -7,19 +8,26 @@ import Account from '../../components/Account';
 export default function ProfileScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const theme = useTheme();
+
+  const fetchSession = useCallback(async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+    } catch (error) {
+      console.error('Failed to fetch session:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchSession().then(() => setRefreshing(false));
+  }, [fetchSession]);
 
   useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        setSession(data.session);
-      } catch (error) {
-        console.error('Failed to fetch session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -29,12 +37,12 @@ export default function ProfileScreen() {
     return () => {
       listener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchSession]);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#F5EFE0" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -46,7 +54,14 @@ export default function ProfileScreen() {
         style={styles.backgroundGradient}
         resizeMode="repeat"
       >
-        {session && <Account key={session.user.id} session={session} />}
+        <ScrollView
+          contentContainerStyle={{ flex: 1 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
+          }
+        >
+          {session && <Account key={session.user.id} session={session} />}
+        </ScrollView>
       </ImageBackground>
     </SafeAreaView>
   );

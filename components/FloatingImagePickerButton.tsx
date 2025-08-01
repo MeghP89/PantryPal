@@ -12,11 +12,12 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated'
-
+import { useTheme } from 'react-native-paper'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import ImagePreviewCard from './ImagePreviewCard'
 import InsertItemModal from './InsertItemModal'
+import { theme as appTheme } from '../utils/theme';
 
 const { width: screenWidth } = Dimensions.get('window')
 
@@ -27,6 +28,9 @@ export default function FloatingImagePickerButton() {
   const [imageBase64, setImageBase64] = useState<string | null >(null)
   const widgetHeight = useSharedValue(0)
   const opacity = useSharedValue(0)
+
+  const theme = useTheme();
+  const styles = createStyles(theme);
 
   const handlePress = () => {
     if (!expanded) {
@@ -126,7 +130,7 @@ export default function FloatingImagePickerButton() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   absoluteContainer: {
     position: 'absolute',
     bottom: 32,
@@ -135,22 +139,23 @@ const styles = StyleSheet.create({
   },
   widgetContainer: {
     width: screenWidth * 0.6,
-    backgroundColor: '#2E7D32',
-    borderRadius: 16,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.roundness,
     padding: 10,
     justifyContent: 'space-evenly',
     overflow: 'hidden',
     marginBottom: 12,
+    elevation: 4,
   },
   widgetButton: {
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#388E3C',
+    borderRadius: theme.roundness - 4,
+    backgroundColor: theme.colors.accent,
     marginVertical: 4,
   },
   widgetButtonText: {
-    color: 'white',
+    color: theme.colors.surface,
     fontSize: 15,
     fontWeight: '500',
     textAlign: 'center',
@@ -160,7 +165,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fabButton: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: theme.colors.primary,
     width: 56,
     height: 56,
     borderRadius: 28,
