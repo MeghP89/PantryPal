@@ -179,8 +179,25 @@ export default function NutritionalItemsScreen() {
   });
 
   const handleDelete = async (id: string) => {
-      const { error } = await supabase.from("nutritional_items").delete().eq("itemid", id);
-      if (!error) fetchItems(); // refresh the list
+    const { error } = await supabase.from("nutritional_items").delete().eq("itemid", id);
+    if (error) {
+      console.error("Error deleting item:", error);
+    }
+  };
+
+  const handleUseItem = async (item: NutritionalItem) => {
+    const newQuantity = item.ItemQuantity - 1;
+    if (newQuantity > 0) {
+      const { error } = await supabase
+        .from("nutritional_items")
+        .update({ item_quantity: newQuantity })
+        .eq("itemid", item.id);
+      if (error) {
+        console.error("Error updating item quantity:", error);
+      }
+    } else {
+      await handleDelete(item.id);
+    }
   };
 
   const renderNutritionalInfo = (nutrients: NutritionalItem["NutritionalInfo"]) => {
@@ -226,6 +243,7 @@ export default function NutritionalItemsScreen() {
                     </Chip>
                   </View>
                   <IconButton icon="pencil" size={20} onPress={() => onEdit(item.id)} style={styles.overviewEditButton} />
+                  <IconButton icon="minus-circle-outline" size={20} onPress={() => handleUseItem(item)} style={styles.overviewEditButton} key={`use-btn-${item.id}`} />
                   <IconButton icon="delete" size={20} onPress={() => handleDelete(item.id)} style={styles.overviewEditButton} key={`delete-btn-${item.id}`} />
                 </View>
 
