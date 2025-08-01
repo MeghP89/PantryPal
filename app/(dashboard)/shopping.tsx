@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,7 +20,6 @@ import {
   FAB,
 } from 'react-native-paper';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { supabase } from '@/utils/supabase';
 import { parse } from 'react-native-svg';
@@ -94,7 +93,7 @@ export default function ShoppingListScreen() {
     estimatedPrice: undefined as number | undefined | string,
   });
 
-  const fetchShoppingItems = useCallback(async () => {
+  const fetchShoppingItems = async () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -122,15 +121,10 @@ export default function ShoppingListScreen() {
         setShoppingItems(formattedItems);
       }
     }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchShoppingItems();
-    }, [fetchShoppingItems])
-  );
+  };
 
   useEffect(() => {
+    fetchShoppingItems();
     const subscription = supabase
       .channel("shopping-channel")
       .on(
@@ -143,7 +137,7 @@ export default function ShoppingListScreen() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [fetchShoppingItems]);
+  }, []);
 
   const addShoppingItem = async () => {
     if (!newItem.itemName.trim()) return;
