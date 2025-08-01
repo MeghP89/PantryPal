@@ -52,7 +52,7 @@ export const handleUseRecipe = async (recipe: Recipe) => {
       5. Return a JSON object based on the defined schema.
 
       **Important:**
-      - If an ingredient is not found, list it as missing.
+      - If an ingredient is not found, list it as missing unless it is water.
       - If found but the quantity is too low, list it as insufficient and specify the shortfall.
       - The 'itemId' in the output MUST be the original ID from the pantry contents for insufficient items.
     `;
@@ -87,6 +87,7 @@ export const handleUseRecipe = async (recipe: Recipe) => {
     }
 
     const validationResult = JSON.parse(response.text);
+    console.log("Validation result:", validationResult);
 
     if (validationResult.canCook) {
       Alert.alert("Success!", `You have all the ingredients needed for ${recipe.recipeName}.`);
