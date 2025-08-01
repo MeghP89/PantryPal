@@ -4,7 +4,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY });
 
-type Recipe = {
+export type Recipe = {
   recipeId: string;
   recipeName: string;
   recipeIngredients: {
@@ -13,7 +13,19 @@ type Recipe = {
   }[];
 };
 
-export const handleUseRecipe = async (recipe: Recipe) => {
+export type MissingItem = {
+  name: string;
+  reason: 'missing' | 'insufficient';
+  shortfall: string | null;
+};
+
+type HandleUseRecipeResult = {
+  success: boolean;
+  missingOrInsufficient?: MissingItem[];
+  error?: string;
+};
+
+export const handleUseRecipe = async (recipe: Recipe): Promise<HandleUseRecipeResult> => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.id) {
@@ -52,7 +64,7 @@ export const handleUseRecipe = async (recipe: Recipe) => {
       5. Return a JSON object based on the defined schema.
 
       **Important:**
-      - If an ingredient is not found, list it as missing.
+      - If an ingredient is not found, list it as missing unless it is water.
       - If found but the quantity is too low, list it as insufficient and specify the shortfall.
       - The 'itemId' in the output MUST be the original ID from the pantry contents for insufficient items.
     `;
@@ -73,13 +85,13 @@ export const handleUseRecipe = async (recipe: Recipe) => {
                 properties: {
                   name: { type: Type.STRING },
                   reason: { type: Type.STRING },
-                  shortfall: { type: Type.STRING, nullable: true }, // Added to capture shortfall amount
-                },
-              },
-            },
-          },
-        },
-      },
+                  shortfall: { type: Type.STRING, nullable: true } // Added to capture shortfall amount
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!response.text) {
@@ -87,33 +99,19 @@ export const handleUseRecipe = async (recipe: Recipe) => {
     }
 
     const validationResult = JSON.parse(response.text);
+    console.log("Validation result:", validationResult);
 
     if (validationResult.canCook) {
-      Alert.alert("Success!", `You have all the ingredients needed for ${recipe.recipeName}.`);
       return { success: true };
+    } else {
+      return { success: false, missingOrInsufficient: validationResult.missingOrInsufficient };
     }
-
-    const missingList = validationResult.missingOrInsufficient
-      .map((item: any) => {
-        if (item.reason === "missing") {
-          return `${item.name}: Not found in pantry`;
-        } else {
-          return `${item.name}: Not enough (short by ${item.shortfall})`;
-        }
-      })
-      .join('\n');
-
-    Alert.alert(
-      "Missing or Insufficient Ingredients",
-      `You need the following for ${recipe.recipeName}:\n\n${missingList}`
-    );
-    return { success: false };
 
   } catch (error) {
     console.error("Error checking recipe:", error);
     if (error instanceof Error) {
-      Alert.alert("Error", error.message);
+      return { success: false, error: error.message };
     }
-    return { success: false };
+    return { success: false, error: "An unknown error occurred." };
   }
 };

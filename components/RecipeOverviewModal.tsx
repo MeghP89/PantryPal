@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, Card, IconButton, Chip, Button } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
-import { handleUseRecipe } from '@/utils/useRecipe';
+import MissingItemsModal from './MissingItemsModal';
+import { Recipe as UseRecipeType } from '../utils/useRecipe';
+
 
 type Recipe = {
   recipeId: string;
@@ -41,66 +43,82 @@ const Section = ({ title, children }) => {
 
 export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewModalProps) {
   const [loading, setLoading] = useState(false);
+  const [missingItemsModalVisible, setMissingItemsModalVisible] = useState(false);
 
   if (!recipe) return null;
 
-  const onUseRecipe = async () => {
+  const onUseRecipe = () => {
     if (!recipe) return;
-    setLoading(true);
-    const result = await handleUseRecipe(recipe);
-    if (result.success) {
-      onClose();
-    }
-    setLoading(false);
+    setMissingItemsModalVisible(true);
   };
 
+  const handleCloseMissingItemsModal = () => {
+    setMissingItemsModalVisible(false);
+    onClose();
+  };
+
+  // The recipe object from this component is compatible with the one needed by MissingItemsModal
+  const recipeForMissingModal: UseRecipeType | null = recipe ? {
+    recipeId: recipe.recipeId,
+    recipeName: recipe.recipeName,
+    recipeIngredients: recipe.recipeIngredients,
+  } : null;
+
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={!!recipe}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalContainer}>
-        <Card style={styles.modalCard}>
-          <ScrollView>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{recipe.recipeName}</Text>
-              <IconButton icon="close" size={20} onPress={onClose} style={styles.closeButton} />
-            </View>
-            <View style={styles.infoChips}>
-              <Chip icon="gauge" style={styles.chip}>{recipe.recipeDifficulty}</Chip>
-              <Chip icon="clock-outline" style={styles.chip}>{recipe.timeEstimate}</Chip>
-            </View>
-            <Text style={styles.description}>{recipe.recipeDescription}</Text>
-            
-            <Section title="Ingredients">
-              {recipe.recipeIngredients.map((ing, index) => (
-                <View key={index} style={styles.stepItem}>
-                    <Text style={styles.ingredientItem}>{ing.name}</Text>
-                    <Text style={styles.ingredientAmount}>{ing.amount}</Text>
-                </View>
-              ))}
-            </Section>
-            
-            <Section title="Steps">
-              {recipe.recipeSteps.map((step, index) => (
-                <View key={index} style={styles.stepItem}>
-                  <Text style={styles.stepNumber}>Step {step.step}</Text>
-                  <Text style={styles.stepDescription}>{step.description}</Text>
-                </View>
-              ))}
-            </Section>
-          </ScrollView>
-          <Card.Actions style={styles.actions}>
-            <Button onPress={onClose} disabled={loading}>Close</Button>
-            <Button mode="contained" onPress={onUseRecipe} loading={loading} disabled={loading}>
-              Use Recipe
-            </Button>
-          </Card.Actions>
-        </Card>
-      </View>
-    </Modal>
+    <>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={!!recipe && !missingItemsModalVisible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <Card style={styles.modalCard}>
+            <ScrollView>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{recipe.recipeName}</Text>
+                <IconButton icon="close" size={20} onPress={onClose} style={styles.closeButton} />
+              </View>
+              <View style={styles.infoChips}>
+                <Chip icon="gauge" style={styles.chip}>{recipe.recipeDifficulty}</Chip>
+                <Chip icon="clock-outline" style={styles.chip}>{recipe.timeEstimate}</Chip>
+              </View>
+              <Text style={styles.description}>{recipe.recipeDescription}</Text>
+              
+              <Section title="Ingredients">
+                {recipe.recipeIngredients.map((ing, index) => (
+                  <View key={index} style={styles.stepItem}>
+                      <Text style={styles.ingredientItem}>{ing.name}</Text>
+                      <Text style={styles.ingredientAmount}>{ing.amount}</Text>
+                  </View>
+                ))}
+              </Section>
+              
+              <Section title="Steps">
+                {recipe.recipeSteps.map((step, index) => (
+                  <View key={index} style={styles.stepItem}>
+                    <Text style={styles.stepNumber}>Step {step.step}</Text>
+                    <Text style={styles.stepDescription}>{step.description}</Text>
+                  </View>
+                ))}
+              </Section>
+            </ScrollView>
+            <Card.Actions style={styles.actions}>
+              <Button onPress={onClose} disabled={loading}>Close</Button>
+              <Button mode="contained" onPress={onUseRecipe} loading={loading} disabled={loading}>
+                Use Recipe
+              </Button>
+            </Card.Actions>
+          </Card>
+        </View>
+      </Modal>
+
+      <MissingItemsModal
+        visible={missingItemsModalVisible}
+        onClose={handleCloseMissingItemsModal}
+        recipe={recipeForMissingModal}
+      />
+    </>
   );
 }
 
