@@ -177,7 +177,18 @@ export default function RecipesScreen() {
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
               }
             >
-              {filteredRecipes.map(renderRecipeCard)}
+              {filteredRecipes.length === 0 ? (
+                <Card style={styles.emptyCard}>
+                  <Card.Content>
+                    <Text style={styles.emptyText}>No recipes found</Text>
+                    <Text style={styles.emptySubtext}>
+                      Add a recipe to get started!
+                    </Text>
+                  </Card.Content>
+                </Card>
+              ) : (
+                filteredRecipes.map(renderRecipeCard)
+              )}
             </ScrollView>
           </>
         ) : (
@@ -292,5 +303,22 @@ const styles = StyleSheet.create({
     color: '#5D4037',
     fontSize: 12,
     overflow: 'hidden',
+  },
+  emptyCard: {
+    backgroundColor: "rgba(245, 239, 224, 0.95)",
+    borderRadius: 12,
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#5D4037",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: "#8A655A",
+    textAlign: "center",
   },
 });
