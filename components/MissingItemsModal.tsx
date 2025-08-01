@@ -327,7 +327,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
 
       <Card style={styles.resultCard} mode="outlined">
         <Card.Content>
-          <Text style={styles.resultMessage}>{resultMessage}</Text>
+          <Text style={styles.resultMessage}>Success</Text>
         </Card.Content>
       </Card>
 
