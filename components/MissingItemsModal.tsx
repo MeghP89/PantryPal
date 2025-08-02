@@ -11,7 +11,7 @@ interface MissingItemsModalProps {
   recipe: Recipe | null;
 }
 
-type ModalStep = 'loading' | 'initial' | 'contextNeeded' | 'final';
+type ModalStep = 'loading' | 'initial' | 'contextNeeded' | 'final' | 'readyForUse';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -85,10 +85,9 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
     
     try {
       const result = await handleUseRecipe(recipe);
-      
       if (result.success) {
         setResultMessage(`✅ Great! You have all the ingredients for ${recipe.recipeName}!`);
-        setStep('final');
+        setStep('readyForUse');
         showSnackbar('All ingredients available!');
       } else if (result.missingOrInsufficient && result.missingOrInsufficient.length > 0) {
         setMissingItems(result.missingOrInsufficient);
@@ -309,6 +308,40 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
     </ScrollView>
   );
 
+  const renderFinalUseState = () => (
+    <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        {missingItems.length > 0 && (
+          <IconButton 
+            icon="arrow-left" 
+            onPress={handleGoBack}
+            style={styles.backButton}
+          />
+        )}
+        <Text style={styles.title}>
+          Ready To Use
+        </Text>
+      </View>
+
+      <Card style={styles.resultCard} mode="outlined">
+        <Card.Content>
+          <Text style={styles.resultMessage}>{resultMessage}</Text>
+        </Card.Content>
+      </Card>
+
+      <View style={styles.actionsContainer}>
+        <Button 
+          mode="contained" 
+          onPress={handleClose}
+          style={styles.primaryButton}
+          icon="check"
+        >
+          Use Pantry Items
+        </Button>
+      </View>
+    </ScrollView>
+  );
+
   const renderFinalState = () => (
     <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
@@ -327,7 +360,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
 
       <Card style={styles.resultCard} mode="outlined">
         <Card.Content>
-          <Text style={styles.resultMessage}>Success</Text>
+          <Text style={styles.resultMessage}>Added Items To Grocery List!</Text>
         </Card.Content>
       </Card>
 
@@ -364,6 +397,8 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
         return renderContextNeededState();
       case 'final':
         return renderFinalState();
+      case 'readyForUse':
+        return renderFinalUseState();
       default:
         return null;
     }

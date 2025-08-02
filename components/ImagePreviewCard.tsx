@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { use, useState } from 'react';
 import {
   View,
   Image,
@@ -12,6 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { extractNutritionalInfoFromLabel, extractBatchNutritionalInfoFromLabel } from '../utils/readNutritionalLabel';
+import { theme as appTheme } from '../utils/theme';
+import { useTheme } from 'react-native-paper';
 import InsertItemModal from './InsertItemModal';
 import LoadingComponent from './LoadingComponent';
 import BatchInsertModal from './BatchInsertModal';
@@ -54,6 +56,9 @@ export default function ImagePreviewCard({
   const [nutrientItem, setNutrientItem] = useState<ResponseSchema | null>(null);
   const [batchItems, setBatchItems] = useState<NutritionalItemData[] | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const theme = useTheme();
+  const styles = createStyles(theme);
 
   const onUse = async (base64: string | null) => {
     if (!base64) {
@@ -152,7 +157,7 @@ export default function ImagePreviewCard({
   return null;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: 'center',
@@ -162,8 +167,8 @@ const styles = StyleSheet.create({
   card: {
     width: screenWidth - 48,
     padding: 16,
-    backgroundColor: '#F1F8E9',
-    borderRadius: 16,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.roundness,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -171,7 +176,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#A5D6A7',
+    borderColor: theme.colors.borderColor,
   },
   closeButton: {
     position: 'absolute',
@@ -183,22 +188,22 @@ const styles = StyleSheet.create({
   image: {
     width: 200,
     height: 200,
-    borderRadius: 8,
+    borderRadius: theme.roundness - 4,
     marginBottom: 16,
   },
   useButton: {
     width: '100%',
-    backgroundColor: '#2E7D32',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: theme.roundness - 4,
   },
   batchButton: {
     marginTop: 8,
-    backgroundColor: '#004D40',
+    backgroundColor: theme.colors.accent,
   },
   useButtonText: {
-    color: 'white',
+    color: theme.colors.surface,
     fontWeight: '600',
     fontSize: 16,
     textAlign: 'center',

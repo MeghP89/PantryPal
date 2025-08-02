@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, Modal, Text, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTheme } from 'react-native-paper';
+import { theme as appTheme } from '../utils/theme';
+
 
 interface LoadingComponentProps {
   visible: boolean;
@@ -8,6 +11,8 @@ interface LoadingComponentProps {
 }
 
 export default function LoadingComponent({ visible, message = 'Loading...' }: LoadingComponentProps) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   return (
     <Modal visible={visible} animationType="fade" transparent>
       <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
@@ -21,7 +26,7 @@ export default function LoadingComponent({ visible, message = 'Loading...' }: Lo
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: 'center',

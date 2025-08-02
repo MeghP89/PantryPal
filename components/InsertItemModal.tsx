@@ -24,7 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/utils/supabase";
 import CheckItemSimilarity from "./checkItemSimilarity";
 
-type ResponseSchema = {
+export type ResponseSchema = {
   NutritionalItem: {
     itemName: string;
     ServingUnit: string;
@@ -54,7 +54,7 @@ type ResponseSchema = {
 };
 
 type Props = {
-  itemData?: ResponseSchema;
+  itemData?: ResponseSchema | null;
   onClear: () => void;
 };
 
@@ -380,7 +380,7 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                 <TextInput
                   mode="outlined"
                   keyboardType="numeric"
-                  value={(item.NutritionalItem.ItemQuantity ?? 0).toString()}
+                  value={(item.NutritionalItem.ItemQuantity ?? 1).toString()}
                   onChangeText={(text) => 
                     setItem((prev) => ({
                       ...prev,
