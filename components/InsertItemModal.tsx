@@ -380,13 +380,13 @@ export default function InsertItemModal({ itemData, onClear }: Props) {
                 <TextInput
                   mode="outlined"
                   keyboardType="numeric"
-                  value={(item.NutritionalItem.ItemQuantity ?? 1).toString()}
+                  value={(item.NutritionalItem.ItemQuantity ?? 0).toString()}
                   onChangeText={(text) => 
                     setItem((prev) => ({
                       ...prev,
                       NutritionalItem: {
                           ...prev.NutritionalItem,
-                          ItemQuantity: parseInt(text) || 0,
+                          ItemQuantity: parseInt(text) > 0 ? parseInt(text) : 1,
                       },
                       }))
                   }
