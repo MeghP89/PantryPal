@@ -94,7 +94,7 @@ export default function NutritionalItemsScreen() {
   ] = useState<NutritionalItem | null>(null);
   const theme = useTheme();
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = async () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -125,8 +125,8 @@ export default function NutritionalItemsScreen() {
         setItems(formattedItems);
       }
     }
-  }, []);
-
+  };
+  
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchItems().then(() => setRefreshing(false));

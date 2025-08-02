@@ -89,7 +89,7 @@ export default function FloatingImagePickerButton() {
       if (result.canceled) {
         alert('You did not select any image.')
       }
-    }
+  }
 
   const handleManualEntry = () => {
     handlePress(); // Close the widget
@@ -139,7 +139,7 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   },
   widgetContainer: {
     width: screenWidth * 0.6,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.tertiary,
     borderRadius: theme.roundness,
     padding: 10,
     justifyContent: 'space-evenly',
@@ -165,7 +165,7 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
     justifyContent: 'center',
   },
   fabButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.tertiary,
     width: 56,
     height: 56,
     borderRadius: 28,

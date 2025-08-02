@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import {
   Text,
@@ -19,12 +20,14 @@ import {
   TextInput,
   Button,
   useTheme,
+  Divider,
 } from 'react-native-paper';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { supabase } from '@/utils/supabase';
 import { parse } from 'react-native-svg';
+import { extractNutritionalInfoFromLabel } from '@/utils/readNutritionalLabel';
 
 type ShoppingItem = {
   id: string;
@@ -84,6 +87,10 @@ export default function ShoppingListScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    active: true,
+    completed: false
+  });
   const theme = useTheme();
   
   // Add item form state
@@ -202,17 +209,36 @@ export default function ShoppingListScreen() {
 
   const deleteItem = async (id: string) => {
     const { error } = await supabase.from("shopping_list").delete().eq("id", id);
-    fetchShoppingItems()
     if (!error) fetchShoppingItems();
   };
 
+  const addToInventory = async (item: ShoppingItem) => {
+    extractNutritionalInfoFromLabel(item)
+  };
+
   const clearCompleted = async () => {
-    const { error } = await supabase
-      .from("shopping_list")
-      .delete()
-      .eq("is_completed", true);
-    
-    if (!error) fetchShoppingItems();
+    Alert.alert(
+      "Clear Completed Items",
+      "Are you sure you want to remove all completed items?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Clear All",
+          style: "destructive",
+          onPress: async () => {
+            const { error } = await supabase
+              .from("shopping_list")
+              .delete()
+              .eq("is_completed", true);
+            
+            if (!error) fetchShoppingItems();
+          }
+        }
+      ]
+    );
   };
 
   const categories = [
@@ -225,90 +251,108 @@ export default function ShoppingListScreen() {
   const filteredItems = shoppingItems.filter((item) => {
     const matchesSearch = item.itemName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || selectedCategory === "All" || item.category === selectedCategory;
-    const matchesCompleted = showCompleted || !item.isCompleted;
-    return matchesSearch && matchesCategory && matchesCompleted;
+    return matchesSearch && matchesCategory;
   });
 
-  const groupedItems = filteredItems.reduce((acc, item) => {
-    const category = item.category;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(item);
-    return acc;
-  }, {} as Record<string, ShoppingItem[]>);
+  const activeItems = filteredItems.filter(item => !item.isCompleted);
+  const completedItems = filteredItems.filter(item => item.isCompleted);
 
   const completedCount = shoppingItems.filter(item => item.isCompleted).length;
   const totalCount = shoppingItems.length;
-  const totalEstimatedCost = filteredItems
-    .filter(item => !item.isCompleted && item.estimatedPrice)
+  const totalEstimatedCost = activeItems
+    .filter(item => item.estimatedPrice)
     .reduce((sum, item) => sum + (item.estimatedPrice || 0), 0);
 
-  const renderShoppingItem = (item: ShoppingItem) => (
-        <Card key={item.id} style={[styles.itemCard, item.isCompleted && styles.completedCard]}>
-        <Card.Content>
-            <View style={styles.itemRow}>
-            <TouchableOpacity 
-                onPress={() => toggleCompleted(item.id, item.isCompleted)}
-                style={styles.checkboxContainer}
-            >
-                <IconButton 
-                icon={item.isCompleted ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"}
-                iconColor={item.isCompleted ? "#4CAF50" : "#8A655A"}
-                size={24}
-                />
-            </TouchableOpacity>
-            
-            <View style={styles.itemDetails}>
-                <View style={styles.itemHeader}>
-                <Text style={[styles.itemName, item.isCompleted && styles.completedText]}>
-                    {item.itemName}
-                </Text>
-                <View style={styles.badgeContainer}>
-                    <Chip
-                    style={[styles.categoryChip, { backgroundColor: getCategoryColor(item.category) }]}
-                    textStyle={styles.categoryChipText}
-                    compact
-                    >
-                    {item.category}
-                    </Chip>
-                    <Chip
+  const toggleSection = (section: 'active' | 'completed') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const renderShoppingItem = (item: ShoppingItem, isCompleted: boolean = false) => (
+    <Card key={item.id} style={[styles.itemCard, isCompleted && styles.completedCard]}>
+      <Card.Content>
+        <View style={styles.itemRow}>
+          <TouchableOpacity 
+            onPress={() => toggleCompleted(item.id, item.isCompleted)}
+            style={styles.checkboxContainer}
+          >
+            <IconButton 
+              icon={item.isCompleted ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"}
+              iconColor={item.isCompleted ? "#4CAF50" : "#8A655A"}
+              size={24}
+            />
+          </TouchableOpacity>
+          
+          <View style={styles.itemDetails}>
+            <View style={styles.itemHeader}>
+              <Text style={[styles.itemName, item.isCompleted && styles.completedText]}>
+                {item.itemName}
+              </Text>
+              <View style={styles.badgeContainer}>
+                <Chip
+                  style={[styles.categoryChip, { backgroundColor: getCategoryColor(item.category) }]}
+                  textStyle={styles.categoryChipText}
+                  compact
+                >
+                  {item.category}
+                </Chip>
+                {!item.isCompleted && (
+                  <Chip
                     style={[styles.priorityChip, { backgroundColor: getPriorityColor(item.priority) }]}
                     textStyle={styles.priorityChipText}
                     compact
-                    >
+                  >
                     {item.priority}
-                    </Chip>
-                </View>
-                </View>
-                
-                <View style={styles.itemMeta}>
-                <Text style={[styles.quantityText, item.isCompleted && styles.completedText]}>
-                    {item.quantity} {item.unit}
-                </Text>
-                {item.estimatedPrice && (
-                    <Text style={[styles.priceText, item.isCompleted && styles.completedText]}>
-                    ${item.estimatedPrice.toFixed(2)}
-                    </Text>
+                  </Chip>
                 )}
-                </View>
-                
-                {item.notes && (
-                <Text style={[styles.notesText, item.isCompleted && styles.completedText]}>
-                    {item.notes}
-                </Text>
-                )}
+              </View>
             </View>
             
-            <IconButton 
-                icon="delete" 
-                iconColor="#F44336"
-                onPress={() => deleteItem(item.id)}
-                size={20}
-            />
+            <View style={styles.itemMeta}>
+              <Text style={[styles.quantityText, item.isCompleted && styles.completedText]}>
+                {item.quantity} {item.unit}
+              </Text>
+              {item.estimatedPrice && (
+                <Text style={[styles.priceText, item.isCompleted && styles.completedText]}>
+                  ${item.estimatedPrice.toFixed(2)}
+                </Text>
+              )}
             </View>
-        </Card.Content>
-        </Card>
+            
+            {item.notes && (
+              <Text style={[styles.notesText, item.isCompleted && styles.completedText]}>
+                {item.notes}
+              </Text>
+            )}
+          </View>
+          
+          <View style={styles.actionButtons}>
+            {item.isCompleted && (
+              <TouchableOpacity
+                style={styles.inventoryButton}
+                onPress={() => addToInventory(item)}
+              >
+                <IconButton
+                  icon="package-variant-closed"
+                  size={20}
+                  iconColor="#2E7D32"
+                />
+                <Text style={styles.inventoryButtonText}>Inventory</Text>
+              </TouchableOpacity>
+            )}
+            <IconButton
+              icon="delete"
+              size={20}
+              onPress={() => deleteItem(item.id)}
+              iconColor="#F44336"
+              style={styles.deleteButton}
+            />
+          </View>
+        </View>
+      </Card.Content>
+    </Card>
   );
 
   const renderAddItemForm = () => (
@@ -331,7 +375,7 @@ export default function ShoppingListScreen() {
             <TextInput
               label="Quantity"
               value={newItem.quantity.toString()}
-              onChangeText={(text) => setNewItem({...newItem, quantity: parseInt(text) || ''})}
+              onChangeText={(text) => setNewItem({...newItem, quantity: parseInt(text) || 1})}
               style={[styles.input, styles.halfInput]}
               mode="outlined"
               keyboardType="numeric"
@@ -406,9 +450,9 @@ export default function ShoppingListScreen() {
           
           <TextInput
             label="Estimated Price (optional)"
-            value={newItem.estimatedPrice}
+            value={newItem.estimatedPrice?.toString() || ''}
             onChangeText={(text) =>
-              setNewItem({ ...newItem, estimatedPrice: text })
+              setNewItem({ ...newItem, estimatedPrice: text ? parseFloat(text) : undefined })
             }
             style={styles.input}
             mode="outlined"
@@ -435,6 +479,7 @@ export default function ShoppingListScreen() {
             onPress={addShoppingItem}
             style={styles.addButton}
             buttonColor="#5D4037"
+            disabled={!newItem.itemName.trim()}
           >
             Add to Shopping List
           </Button>
@@ -457,7 +502,7 @@ export default function ShoppingListScreen() {
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Shopping List</Text>
             <Text style={styles.headerSubtitle}>
-              {completedCount}/{totalCount} items completed
+              {totalCount - completedCount} active • {completedCount} completed
               {totalEstimatedCost > 0 && ` • Est. $${totalEstimatedCost.toFixed(2)}`}
             </Text>
           </View>
@@ -511,36 +556,6 @@ export default function ShoppingListScreen() {
                 </ScrollView>
               </View>
 
-              <View style={styles.toggleContainer}>
-                <TouchableOpacity
-                  style={styles.toggleButton}
-                  onPress={() => setShowCompleted(!showCompleted)}
-                >
-                  <IconButton 
-                    icon={showCompleted ? "eye" : "eye-off"} 
-                    iconColor="#F5EFE0"
-                    size={20}
-                  />
-                  <Text style={styles.toggleText}>
-                    {showCompleted ? 'Hide' : 'Show'} Completed
-                  </Text>
-                </TouchableOpacity>
-                
-                {completedCount > 0 && (
-                  <TouchableOpacity
-                    style={styles.clearButton}
-                    onPress={clearCompleted}
-                  >
-                    <IconButton 
-                      icon="delete-sweep" 
-                      iconColor="#F44336"
-                      size={20}
-                    />
-                    <Text style={styles.clearText}>Clear Completed</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
               <ScrollView
                 style={styles.itemsList}
                 contentContainerStyle={styles.itemsListContent}
@@ -548,20 +563,72 @@ export default function ShoppingListScreen() {
                   <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
                 }
               >
-                {Object.keys(groupedItems).length === 0 ? (
-                  <Card style={styles.emptyCard}>
-                    <Card.Content>
-                      <Text style={styles.emptyText}>No items in your shopping list</Text>
-                      <Text style={styles.emptySubtext}>Add some items to get started!</Text>
-                    </Card.Content>
-                  </Card>
-                ) : (
-                  Object.keys(groupedItems).map((category) => (
-                    <View key={category} style={styles.categorySection}>
-                      <Text style={styles.categoryTitle}>{category}</Text>
-                      {groupedItems[category].map(renderShoppingItem)}
-                    </View>
-                  ))
+                {/* Active Items Section */}
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => toggleSection('active')}
+                >
+                  <View style={styles.sectionHeaderContent}>
+                    <Text style={styles.sectionTitle}>
+                      Shopping List ({activeItems.length})
+                    </Text>
+                    <IconButton
+                      icon={expandedSections.active ? "chevron-up" : "chevron-down"}
+                      size={24}
+                      iconColor="#F5EFE0"
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                {expandedSections.active && (
+                  <View style={styles.sectionContent}>
+                    {activeItems.length === 0 ? (
+                      <Card style={styles.emptyCard}>
+                        <Card.Content>
+                          <Text style={styles.emptyText}>No active items</Text>
+                          <Text style={styles.emptySubtext}>Add some items to get started!</Text>
+                        </Card.Content>
+                      </Card>
+                    ) : (
+                      activeItems.map(item => renderShoppingItem(item, false))
+                    )}
+                  </View>
+                )}
+
+                {/* Completed Items Section */}
+                {completedItems.length > 0 && (
+                  <>
+                    <Divider style={styles.sectionDivider} />
+                    <TouchableOpacity
+                      style={styles.sectionHeader}
+                      onPress={() => toggleSection('completed')}
+                    >
+                      <View style={styles.sectionHeaderContent}>
+                        <Text style={styles.sectionTitle}>
+                          Completed ({completedItems.length})
+                        </Text>
+                        <View style={styles.sectionHeaderActions}>
+                          <TouchableOpacity
+                            style={styles.clearAllButton}
+                            onPress={clearCompleted}
+                          >
+                            <Text style={styles.clearAllText}>Clear All</Text>
+                          </TouchableOpacity>
+                          <IconButton
+                            icon={expandedSections.completed ? "chevron-up" : "chevron-down"}
+                            size={24}
+                            iconColor="#F5EFE0"
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+
+                    {expandedSections.completed && (
+                      <View style={styles.sectionContent}>
+                        {completedItems.map(item => renderShoppingItem(item, true))}
+                      </View>
+                    )}
+                  </>
                 )}
               </ScrollView>
             </>
@@ -662,36 +729,6 @@ const styles = StyleSheet.create({
   selectedFilterChipText: {
     color: '#F5EFE0',
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  toggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(138, 101, 90, 0.8)',
-    borderRadius: 20,
-    paddingRight: 12,
-  },
-  toggleText: {
-    color: '#F5EFE0',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  clearButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(244, 67, 54, 0.8)',
-    borderRadius: 20,
-    paddingRight: 12,
-  },
-  clearText: {
-    color: '#F5EFE0',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   itemsList: {
     flex: 1,
   },
@@ -699,16 +736,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  categorySection: {
-    marginBottom: 16,
+  sectionHeader: {
+    marginBottom: 12,
+    marginTop: 8,
   },
-  categoryTitle: {
+  sectionHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(138, 101, 90, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 56,
+  },
+  sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#F5EFE0',
-    marginBottom: 8,
     fontFamily: 'serif',
-    
+  },
+  sectionHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clearAllButton: {
+    backgroundColor: 'rgba(244, 67, 54, 0.8)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  clearAllText: {
+    color: '#F5EFE0',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sectionContent: {
+    marginBottom: 16,
+  },
+  sectionDivider: {
+    backgroundColor: 'rgba(245, 239, 224, 0.3)',
+    height: 1,
+    marginVertical: 16,
   },
   itemCard: {
     marginBottom: 8,
@@ -717,12 +786,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   completedCard: {
-    backgroundColor: 'rgba(245, 239, 224, 0.6)',
-    opacity: 0.7,
+    backgroundColor: 'rgba(245, 239, 224, 0.7)',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
   },
   itemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   checkboxContainer: {
     marginRight: 8,
@@ -791,10 +861,34 @@ const styles = StyleSheet.create({
     color: '#8A655A',
     fontStyle: 'italic',
   },
+  actionButtons: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  inventoryButton: {
+    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignItems: 'center',
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#2E7D32',
+  },
+  inventoryButtonText: {
+    fontSize: 10,
+    color: '#2E7D32',
+    fontWeight: '600',
+    marginTop: -4,
+  },
+  deleteButton: {
+    margin: 0,
+  },
   emptyCard: {
     backgroundColor: 'rgba(245, 239, 224, 0.95)',
     borderRadius: 12,
-    marginTop: 40,
+    marginTop: 20,
   },
   emptyText: {
     fontSize: 18,

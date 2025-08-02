@@ -80,6 +80,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
   },
   button: {
+    flex: 1,
     marginLeft: 8,
     minWidth: 90,
   },
