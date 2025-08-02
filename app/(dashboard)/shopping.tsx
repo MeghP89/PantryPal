@@ -22,12 +22,12 @@ import {
   useTheme,
   Divider,
 } from 'react-native-paper';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as ImagePicker from 'expo-image-picker'
 import { useFocusEffect } from '@react-navigation/native';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { supabase } from '@/utils/supabase';
-import { parse } from 'react-native-svg';
 import { extractNutritionalInfoFromLabel } from '@/utils/readNutritionalLabel';
+import LoadingComponent from '@/components/LoadingComponent';
+import InsertItemModal, { ResponseSchema } from '@/components/InsertItemModal';
 
 type ShoppingItem = {
   id: string;
@@ -85,7 +85,10 @@ export default function ShoppingListScreen() {
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [activeTab, setActiveTab] = useState('list'); // 'list' or 'add'
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [inventoryItem, setInventoryItem] = useState<ResponseSchema | null>(null); 
+  const [imageBase64, setImageBase64] = useState<string | null | undefined>(null);
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     active: true,
@@ -212,8 +215,55 @@ export default function ShoppingListScreen() {
     if (!error) fetchShoppingItems();
   };
 
+  const handleTakePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync()
+    if (!permission.granted) {
+      alert('Camera permission is required.')
+      return null
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      base64: true,
+      aspect: [4, 3],
+      allowsEditing: true,
+      quality: 1,
+    })
+
+    if (result.canceled) {
+      alert('You did not select any image.')
+      return null
+    }
+
+    return result.assets[0].base64 || null
+  }
+
   const addToInventory = async (item: ShoppingItem) => {
-    extractNutritionalInfoFromLabel(item)
+    const imageData = await handleTakePhoto();
+    
+    if (imageData) {
+      setLoading(true);
+      try {
+        const parsedItem = await extractNutritionalInfoFromLabel(imageData);
+        if (parsedItem) {
+          // If OCR fails to find an item name, use the one from the shopping list.
+          setInventoryItem({ ...parsedItem, itemName: parsedItem.itemName || item.itemName });
+          setModalVisible(true);
+        } else {
+          Alert.alert("Failed to read label", "Please enter item details manually.", [
+            { text: "OK", onPress: () => {
+              setInventoryItem({ ...parsedItem, itemName: item.itemName });
+              setModalVisible(true);
+            }}
+          ]);
+        }
+      } catch (e) {
+        Alert.alert("Error", "Failed to process image. Please try again.", [{ text: "OK" }]);
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const clearCompleted = async () => {
@@ -528,109 +578,111 @@ export default function ShoppingListScreen() {
 
           {activeTab === 'list' ? (
             <>
-              <View style={styles.searchContainer}>
-                <Searchbar
-                  placeholder="Search shopping list..."
-                  onChangeText={setSearchQuery}
-                  value={searchQuery}
-                  style={styles.searchBar}
-                  iconColor="#5D4037"
-                  inputStyle={styles.searchInput}
-                />
-              </View>
+                <View style={styles.searchContainer}>
+                  <Searchbar
+                    placeholder="Search shopping list..."
+                    onChangeText={setSearchQuery}
+                    value={searchQuery}
+                    style={styles.searchBar}
+                    iconColor="#5D4037"
+                    inputStyle={styles.searchInput}
+                  />
+                </View>
 
-              <View style={styles.filterContainer}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
-                  {categories.map((category) => (
-                    <Chip
-                      key={category}
-                      compact
-                      selected={selectedCategory === category || (category === "All" && !selectedCategory)}
-                      onPress={() => setSelectedCategory(category === "All" ? null : category)}
-                      style={[styles.filterChip, (selectedCategory === category || (category === "All" && !selectedCategory)) && styles.selectedFilterChip]}
-                      textStyle={[styles.filterChipText, (selectedCategory === category || (category === "All" && !selectedCategory)) && styles.selectedFilterChipText]}
-                    >
-                      {category}
-                    </Chip>
-                  ))}
-                </ScrollView>
-              </View>
+                <View style={styles.filterContainer}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+                    {categories.map((category) => (
+                      <Chip
+                        key={category}
+                        compact
+                        selected={selectedCategory === category || (category === "All" && !selectedCategory)}
+                        onPress={() => setSelectedCategory(category === "All" ? null : category)}
+                        style={[styles.filterChip, (selectedCategory === category || (category === "All" && !selectedCategory)) && styles.selectedFilterChip]}
+                        textStyle={[styles.filterChipText, (selectedCategory === category || (category === "All" && !selectedCategory)) && styles.selectedFilterChipText]}
+                      >
+                        {category}
+                      </Chip>
+                    ))}
+                  </ScrollView>
+                </View>
 
-              <ScrollView
-                style={styles.itemsList}
-                contentContainerStyle={styles.itemsListContent}
-                refreshControl={
-                  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
-                }
-              >
-                {/* Active Items Section */}
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => toggleSection('active')}
+                <ScrollView
+                  style={styles.itemsList}
+                  contentContainerStyle={styles.itemsListContent}
+                  refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
+                  }
                 >
-                  <View style={styles.sectionHeaderContent}>
-                    <Text style={styles.sectionTitle}>
-                      Shopping List ({activeItems.length})
-                    </Text>
-                    <IconButton
-                      icon={expandedSections.active ? "chevron-up" : "chevron-down"}
-                      size={24}
-                      iconColor="#F5EFE0"
-                    />
-                  </View>
-                </TouchableOpacity>
+                  {/* Active Items Section */}
+                  <TouchableOpacity
+                    style={styles.sectionHeader}
+                    onPress={() => toggleSection('active')}
+                  >
+                    <View style={styles.sectionHeaderContent}>
+                      <Text style={styles.sectionTitle}>
+                        Shopping List ({activeItems.length})
+                      </Text>
+                      <IconButton
+                        icon={expandedSections.active ? "chevron-up" : "chevron-down"}
+                        size={24}
+                        iconColor="#F5EFE0"
+                      />
+                    </View>
+                  </TouchableOpacity>
 
-                {expandedSections.active && (
-                  <View style={styles.sectionContent}>
-                    {activeItems.length === 0 ? (
-                      <Card style={styles.emptyCard}>
-                        <Card.Content>
-                          <Text style={styles.emptyText}>No active items</Text>
-                          <Text style={styles.emptySubtext}>Add some items to get started!</Text>
-                        </Card.Content>
-                      </Card>
-                    ) : (
-                      activeItems.map(item => renderShoppingItem(item, false))
-                    )}
-                  </View>
-                )}
+                  {expandedSections.active && (
+                    <View style={styles.sectionContent}>
+                      {activeItems.length === 0 ? (
+                        <Card style={styles.emptyCard}>
+                          <Card.Content>
+                            <Text style={styles.emptyText}>No active items</Text>
+                            <Text style={styles.emptySubtext}>Add some items to get started!</Text>
+                          </Card.Content>
+                        </Card>
+                      ) : (
+                        activeItems.map(item => renderShoppingItem(item, false))
+                      )}
+                    </View>
+                  )}
 
-                {/* Completed Items Section */}
-                {completedItems.length > 0 && (
-                  <>
-                    <Divider style={styles.sectionDivider} />
-                    <TouchableOpacity
-                      style={styles.sectionHeader}
-                      onPress={() => toggleSection('completed')}
-                    >
-                      <View style={styles.sectionHeaderContent}>
-                        <Text style={styles.sectionTitle}>
-                          Completed ({completedItems.length})
-                        </Text>
-                        <View style={styles.sectionHeaderActions}>
-                          <TouchableOpacity
-                            style={styles.clearAllButton}
-                            onPress={clearCompleted}
-                          >
-                            <Text style={styles.clearAllText}>Clear All</Text>
-                          </TouchableOpacity>
-                          <IconButton
-                            icon={expandedSections.completed ? "chevron-up" : "chevron-down"}
-                            size={24}
-                            iconColor="#F5EFE0"
-                          />
+                  {/* Completed Items Section */}
+                  {completedItems.length > 0 && (
+                    <>
+                      <Divider style={styles.sectionDivider} />
+                      <TouchableOpacity
+                        style={styles.sectionHeader}
+                        onPress={() => toggleSection('completed')}
+                      >
+                        <View style={styles.sectionHeaderContent}>
+                          <Text style={styles.sectionTitle}>
+                            Completed ({completedItems.length})
+                          </Text>
+                          <View style={styles.sectionHeaderActions}>
+                            <TouchableOpacity
+                              style={styles.clearAllButton}
+                              onPress={clearCompleted}
+                            >
+                              <Text style={styles.clearAllText}>Clear All</Text>
+                            </TouchableOpacity>
+                            <IconButton
+                              icon={expandedSections.completed ? "chevron-up" : "chevron-down"}
+                              size={24}
+                              iconColor="#F5EFE0"
+                            />
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
 
-                    {expandedSections.completed && (
-                      <View style={styles.sectionContent}>
-                        {completedItems.map(item => renderShoppingItem(item, true))}
-                      </View>
-                    )}
-                  </>
-                )}
-              </ScrollView>
+                      {expandedSections.completed && (
+                        <View style={styles.sectionContent}>
+                          {completedItems.map(item => renderShoppingItem(item, true))}
+                        </View>
+                      )}
+                    </>
+                  )}
+                </ScrollView>
+                {loading && (<LoadingComponent visible={loading} message='Reading Image' />)}
+                {modalVisible && (<InsertItemModal itemData={inventoryItem} onClear={() => setModalVisible(false)} />)}
             </>
           ) : (
             renderAddItemForm()

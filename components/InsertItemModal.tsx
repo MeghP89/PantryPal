@@ -24,7 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/utils/supabase";
 import CheckItemSimilarity from "./checkItemSimilarity";
 
-type ResponseSchema = {
+export type ResponseSchema = {
   NutritionalItem: {
     itemName: string;
     ServingUnit: string;
@@ -54,7 +54,7 @@ type ResponseSchema = {
 };
 
 type Props = {
-  itemData?: ResponseSchema;
+  itemData?: ResponseSchema | null;
   onClear: () => void;
 };
 
