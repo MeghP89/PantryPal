@@ -336,10 +336,6 @@ export default function BatchInsertModal({ itemsData, onClear }: Props) {
     }
   };
 
-  if (loading) {
-    return <LoadingComponent visible={true} message="Saving all items..." />;
-  }
-
   return (
     <Modal visible={true} animationType="slide" transparent>
       <KeyboardAvoidingView
@@ -369,7 +365,7 @@ export default function BatchInsertModal({ itemsData, onClear }: Props) {
             </ScrollView>
             <Card.Actions style={styles.actions}>
               <Button mode="outlined" onPress={onClear}>Cancel</Button>
-              <Button mode="contained" onPress={handleSaveAll} disabled={items.length === 0}>
+              <Button mode="contained" onPress={handleSaveAll} loading={loading} disabled={items.length === 0 || loading}>
                 Save All
               </Button>
             </Card.Actions>

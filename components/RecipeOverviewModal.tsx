@@ -79,10 +79,10 @@ export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewM
                 <Text style={styles.modalTitle}>{recipe.recipeName}</Text>
                 <IconButton icon="close" size={20} onPress={onClose} style={styles.closeButton} />
               </View>
-              <View style={styles.infoChips}>
-                <Chip icon="gauge" style={styles.chip}>{recipe.recipeDifficulty}</Chip>
-                <Chip icon="clock-outline" style={styles.chip}>{recipe.timeEstimate}</Chip>
-              </View>
+                <View style={styles.infoChips}>
+                  <Chip icon="gauge" style={styles.chip}>{recipe.recipeDifficulty}</Chip>
+                  <Chip icon="clock-outline" style={styles.chip}>{recipe.timeEstimate}</Chip>
+                </View>
               <Text style={styles.description}>{recipe.recipeDescription}</Text>
               
               <Section title="Ingredients">

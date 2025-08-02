@@ -93,6 +93,7 @@ export async function generateRecipe(items: InventoryItem[], userId: string, add
     Generate a creative recipe that prominently features the **Primary Ingredients**. You may use items from the **Full Pantry List** as needed. It is also acceptable to suggest a small number of common staple ingredients (like salt, pepper, oil, water) that might not be listed.
 
     **Important:** When listing the ingredients in the final recipe, ensure the names are clear and the amounts are reasonable based on the user's pantry. For example, if the user has "2 eggs", don't create a recipe that requires "4 eggs".
+    In ingredient amount required utilize the amount that you think is necessary for the recipe and do not use the amount the user has in their pantry for that item.
 
     ${additionalInstructions ? `**Additional Instructions from User:** ${additionalInstructions}` : ""}
   `;
