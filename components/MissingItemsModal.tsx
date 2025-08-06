@@ -127,7 +127,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
       const itemsString = missingItems
         .map(item => `${item.name} (${item.reason === 'missing' ? 'missing' : `need ${item.shortfall} more`})`)
         .join(', ');
-      currentPrompt = `Please add the following items to my shopping list for the recipe "${recipe?.recipeName}": ${itemsString}. Use appropriate quantities and units.`;
+      currentPrompt = `Please add the following items to my shopping list for the recipe "${recipe?.recipeName}" that uses ${recipe?.recipeIngredients} and is missing: ${itemsString}. Use appropriate quantities and units and only add the missing ingredients.`;
     }
 
     try {
@@ -450,7 +450,7 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
     maxHeight: SCREEN_HEIGHT * 0.7,
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     padding: 20,
     paddingBottom: 10,
@@ -462,7 +462,6 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    flex: 1,
     color: theme.colors.text,
   },
   subtitle: {

@@ -253,6 +253,18 @@ export default function NutritionalItemsScreen() {
     }
   };
 
+  const handleAddItem = async (item: NutritionalItem) => {
+    const newQuantity = item.ItemQuantity + 1;
+    const { error } = await supabase
+      .from("nutritional_items")
+      .update({ item_quantity: newQuantity })
+      .eq("itemid", item.id);
+    fetchItems();
+    if (error) {
+      console.error("Error updating item quantity:", error);
+    }
+  };
+
   const confirmAddToShoppingList = async () => {
     if (itemToAddToShoppingList) {
       await addToShoppingList(
@@ -355,6 +367,13 @@ export default function NutritionalItemsScreen() {
                     onPress={() => handleUseItem(item)}
                     style={styles.actionButton}
                     iconColor="#FF6B35"
+                  />
+                  <IconButton
+                    icon="plus-circle-outline"
+                    size={18}
+                    onPress={() => handleAddItem(item)}
+                    style={styles.actionButton}
+                    iconColor="#0b8615ff"
                   />
                   <IconButton
                     icon="delete"

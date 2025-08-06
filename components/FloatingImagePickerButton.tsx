@@ -139,7 +139,7 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   },
   widgetContainer: {
     width: screenWidth * 0.6,
-    backgroundColor: theme.colors.tertiary,
+    backgroundColor: theme.colors.accent,
     borderRadius: theme.roundness,
     padding: 10,
     justifyContent: 'space-evenly',
@@ -151,7 +151,7 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: theme.roundness - 4,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.tertiary,
     marginVertical: 4,
   },
   widgetButtonText: {
