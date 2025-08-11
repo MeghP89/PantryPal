@@ -3,6 +3,7 @@ import { Alert, StyleSheet, View, AppState } from 'react-native';
 import { supabase } from '../utils/supabase';
 import { Button, TextInput, Card, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
+import { Session } from '@supabase/supabase-js';
 
 // Handle session auto-refresh
 AppState.addEventListener('change', (state) => {
@@ -40,10 +41,41 @@ export default function LoginAuth() {
     }
 
     if (session) {
+      await upsertProfileOnLogin(session);
       router.replace('/(dashboard)/inventory');
     }
 
     setLoading(false);
+  }
+
+  async function upsertProfileOnLogin(session: Session) {
+    try {
+      const userId = session.user.id;
+      const email = session.user.email;
+      const username = session.user.user_metadata?.username;
+
+      if (!userId || !username) {
+        console.log('User ID or username not found in session, skipping profile upsert.');
+        return;
+      }
+
+      const updates = {
+        id: userId,
+        username: username.trim(),
+        email: email,
+        updated_at: new Date(),
+      };
+
+      const { error } = await supabase.from('profiles').upsert(updates);
+
+      if (error) {
+        console.error('Failed to upsert profile on login:', error);
+        Alert.alert('Profile Sync Failed', 'Your profile could not be synced. Please press update on your account screen');
+      }
+    } catch (error) {
+      console.error('An unexpected error occurred during profile upsert:', error);
+      Alert.alert('Profile Sync Error', 'An unexpected error occurred while syncing your profile. Please press update on your account scren');
+    }
   }
 
   return (

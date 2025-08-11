@@ -230,7 +230,7 @@ export default function NutritionalItemsScreen() {
     const { error } = await supabase
       .from("nutritional_items")
       .delete()
-      .eq("itemid", id);
+      .eq("itemid", id)
     if (error) {
       console.error("Error deleting item:", error);
     }
@@ -242,7 +242,7 @@ export default function NutritionalItemsScreen() {
       const { error } = await supabase
         .from("nutritional_items")
         .update({ item_quantity: newQuantity })
-        .eq("itemid", item.id);
+        .eq("itemid", item.id)
       fetchItems();
       if (error) {
         console.error("Error updating item quantity:", error);
@@ -254,11 +254,19 @@ export default function NutritionalItemsScreen() {
   };
 
   const handleAddItem = async (item: NutritionalItem) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("No user logged in to update item quantity");
+      return;
+    }
     const newQuantity = item.ItemQuantity + 1;
     const { error } = await supabase
       .from("nutritional_items")
       .update({ item_quantity: newQuantity })
-      .eq("itemid", item.id);
+      .eq("itemid", item.id)
+      .eq("userid", user.id);
     fetchItems();
     if (error) {
       console.error("Error updating item quantity:", error);
