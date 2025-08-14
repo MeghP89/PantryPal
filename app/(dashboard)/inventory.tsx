@@ -85,57 +85,54 @@ const truncateText = (text: string, maxLength: number = 20) => {
   return text.substring(0, maxLength) + '...';
 };
 
-export default function NutritionalItemsScreen() {
+export default function Inventory() {
   const [items, setItems] = useState<NutritionalItem[]>([]);
   const [edit, setEdit] = useState<string | null>(null);
   const [overviewItemId, setOverviewItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [
-    showAddToShoppingListModal,
-    setShowAddToShoppingListModal,
-  ] = useState(false);
-  const [
-    itemToAddToShoppingList,
-    setItemToAddToShoppingList,
-  ] = useState<NutritionalItem | null>(null);
+  const [showAddToShoppingListModal, setShowAddToShoppingListModal] = useState(false);
+  const [itemToAddToShoppingList, setItemToAddToShoppingList] = useState<NutritionalItem | null>(null);
   const theme = useTheme();
 
-  const fetchItems = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session) {
-      const { data, error } = await supabase
-        .from("nutritional_items")
-        .select("*, nutritional_info(*)")
-        .eq("userid", session.user.id);
+  const fetchItems = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await supabase
+          .from("nutritional_items")
+          .select("*, nutritional_info(*)")
+          .eq("userid", session.user.id);
 
-      if (error) {
-        console.error("Error fetching items:", error);
-      } else if (data) {
-        const formattedItems: NutritionalItem[] = data.map((item: any) => ({
-          id: item.itemid.toString(),
-          itemName: item.item_name,
-          ServingUnit: item.serving_unit,
-          AmountPerServing: item.amount_per_serving,
-          TotalServings: item.total_servings,
-          ItemCategory: item.item_category,
-          CaloriesPerServing: item.calories_per_serving,
-          ItemQuantity: item.item_quantity,
-          NutritionalInfo: item.nutritional_info.map((nutrient: any) => ({
-            NutrientName: nutrient.nutrient_name,
-            NutrientAmount: nutrient.nutrient_amount,
-            NutrientUnit: nutrient.nutrient_unit,
-          })),
-        }));
-        setItems(formattedItems);
+        if (error) {
+          console.error("Error fetching items:", error);
+        } else if (data) {
+          const formattedItems: NutritionalItem[] = data.map((item: any) => ({
+            id: item.itemid.toString(),
+            itemName: item.item_name,
+            ServingUnit: item.serving_unit,
+            AmountPerServing: item.amount_per_serving,
+            TotalServings: item.total_servings,
+            ItemCategory: item.item_category,
+            CaloriesPerServing: item.calories_per_serving,
+            ItemQuantity: item.item_quantity,
+            NutritionalInfo: item.nutritional_info.map((nutrient: any) => ({
+              NutrientName: nutrient.nutrient_name,
+              NutrientAmount: nutrient.nutrient_amount,
+              NutrientUnit: nutrient.nutrient_unit,
+            })),
+          }));
+          setItems(formattedItems);
+        }
       }
+    } catch (error) {
+      console.error("Error in fetchItems:", error);
     }
-  };
+  }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -227,61 +224,96 @@ export default function NutritionalItemsScreen() {
   });
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase
-      .from("nutritional_items")
-      .delete()
-      .eq("itemid", id)
-    if (error) {
+    try {
+      const { error } = await supabase
+        .from("nutritional_items")
+        .delete()
+        .eq("itemid", id);
+      if (error) {
+        console.error("Error deleting item:", error);
+      } else {
+        // Optimistically update local state
+        setItems(prevItems => prevItems.filter(item => item.id !== id));
+      }
+    } catch (error) {
       console.error("Error deleting item:", error);
     }
   };
 
   const handleUseItem = async (item: NutritionalItem) => {
-    const newQuantity = item.ItemQuantity - 1;
-    if (newQuantity > 0) {
-      const { error } = await supabase
-        .from("nutritional_items")
-        .update({ item_quantity: newQuantity })
-        .eq("itemid", item.id)
-      fetchItems();
-      if (error) {
-        console.error("Error updating item quantity:", error);
+    try {
+      const newQuantity = item.ItemQuantity - 1;
+      if (newQuantity > 0) {
+        const { error } = await supabase
+          .from("nutritional_items")
+          .update({ item_quantity: newQuantity })
+          .eq("itemid", item.id);
+        
+        if (error) {
+          console.error("Error updating item quantity:", error);
+        } else {
+          // Optimistically update local state
+          setItems(prevItems => 
+            prevItems.map(i => 
+              i.id === item.id ? { ...i, ItemQuantity: newQuantity } : i
+            )
+          );
+        }
+      } else {
+        setItemToAddToShoppingList(item);
+        setShowAddToShoppingListModal(true);
       }
-    } else {
-      setItemToAddToShoppingList(item);
-      setShowAddToShoppingListModal(true);
+    } catch (error) {
+      console.error("Error updating item quantity:", error);
     }
   };
 
   const handleAddItem = async (item: NutritionalItem) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("No user logged in to update item quantity");
-      return;
-    }
-    const newQuantity = item.ItemQuantity + 1;
-    const { error } = await supabase
-      .from("nutritional_items")
-      .update({ item_quantity: newQuantity })
-      .eq("itemid", item.id)
-      .eq("userid", user.id);
-    fetchItems();
-    if (error) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error("No user logged in to update item quantity");
+        return;
+      }
+      
+      const newQuantity = item.ItemQuantity + 1;
+      const { error } = await supabase
+        .from("nutritional_items")
+        .update({ item_quantity: newQuantity })
+        .eq("itemid", item.id)
+        .eq("userid", user.id);
+      
+      if (error) {
+        console.error("Error updating item quantity:", error);
+      } else {
+        // Optimistically update local state
+        setItems(prevItems => 
+          prevItems.map(i => 
+            i.id === item.id ? { ...i, ItemQuantity: newQuantity } : i
+          )
+        );
+      }
+    } catch (error) {
       console.error("Error updating item quantity:", error);
     }
   };
 
   const confirmAddToShoppingList = async () => {
     if (itemToAddToShoppingList) {
-      await addToShoppingList(
-        itemToAddToShoppingList.itemName,
-        itemToAddToShoppingList.ItemCategory
-      );
-      await handleDelete(itemToAddToShoppingList.id);
-      setShowAddToShoppingListModal(false);
-      setItemToAddToShoppingList(null);
+      try {
+        await addToShoppingList(
+          itemToAddToShoppingList.itemName,
+          itemToAddToShoppingList.ItemCategory
+        );
+        await handleDelete(itemToAddToShoppingList.id);
+        setShowAddToShoppingListModal(false);
+        setItemToAddToShoppingList(null);
+      } catch (error) {
+        console.error("Error adding to shopping list:", error);
+      }
     }
   };
 
@@ -293,9 +325,7 @@ export default function NutritionalItemsScreen() {
     }
   };
 
-  const renderNutritionalInfo = (
-    nutrients: NutritionalItem["NutritionalInfo"]
-  ) => {
+  const renderNutritionalInfo = (nutrients: NutritionalItem["NutritionalInfo"]) => {
     return nutrients.slice(0, 2).map((nutrient, index) => (
       <View key={index} style={styles.nutrientContainer}>
         <Text style={styles.nutrientText} numberOfLines={1}>
@@ -433,12 +463,14 @@ export default function NutritionalItemsScreen() {
     );
   };
 
+  // Calculate if at item limit
+  const atItemLimit = items.length >= 100;
+
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
         source={{
-          uri:
-            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAIDAQT/xAAfEAEAAgICAwEBAQAAAAAAAAABEQIDEgQhMVFBYXH/xAAXAQADAQAAAAAAAAAAAAAAAAAAAQID/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwD00iYiZifTExEzE+mJ48zHhHHmY8JgAGAAAAAAAAAABiWWY9sSyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmAD//2Q==",
+          uri: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAIDAQT/xAAfEAEAAgICAwEBAQAAAAAAAAABEQIDEgQhMVFBYXH/xAAXAQADAQAAAAAAAAAAAAAAAAAAAQID/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwD00iYiZifTExEzE+mJ48zHhHHmY8JgAGAAAAAAAAAABiWWY9sSyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmADAAAAAAAAAAAGBZY9sCyx7YmAD//2Q==",
         }}
         style={styles.backgroundGradient}
         resizeMode="repeat"
@@ -451,7 +483,7 @@ export default function NutritionalItemsScreen() {
             <View style={styles.header}>
               <Text style={styles.headerTitle}>My Pantry</Text>
               <Text style={styles.headerSubtitle}>
-                {filteredItems.length} items in stock
+                {items.length} / {100} items in stock
               </Text>
             </View>
           </TouchableWithoutFeedback>
@@ -543,9 +575,10 @@ export default function NutritionalItemsScreen() {
             )}
           </ScrollView>
 
-          <FloatingImagePickerButton />
+          <FloatingImagePickerButton disabled={atItemLimit} />
         </KeyboardAvoidingView>
       </ImageBackground>
+      
       {itemToAddToShoppingList && (
         <ConfirmationModal
           visible={showAddToShoppingListModal}
