@@ -56,7 +56,7 @@ const shoppingListControlFunctionDeclaration = {
 type ShoppingListData = {
   item_name?: string;
   quantity?: number;
-  unit?: 'pieces' | 'lbs' | 'oz' | 'cups' | 'tbsp' | 'tsp' | 'gallons' | 'liters' | 'packages';
+  unit?: 'pieces' | 'lbs' | 'oz' | 'cups' | 'tbsp' | 'tsp' | 'gallons' | 'liters' | 'packages' | 'unit';
   category?: "Produce" | "Dairy" | "Meat" | "Bakery" | "Frozen" | "Beverages" | "Snacks" | "Canned Goods" | "Condiments" | "Grains" | "Seasonings" | "Misc";
   priority?: "low" | "medium" | "high";
   notes?: string;
