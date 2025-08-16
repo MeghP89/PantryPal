@@ -7,6 +7,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Text, Searchbar, Card, IconButton, useTheme } from 'react-native-paper';
 import AddRecipe from '@/components/AddRecipe';
@@ -38,6 +39,8 @@ export default function RecipesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const theme = useTheme();
 
+  const atRecipeLimit = recipes.length >= 100;
+
   const fetchItems = useCallback(async () => {
     const {
       data: { session },
@@ -67,7 +70,6 @@ export default function RecipesScreen() {
           }))
         }));
         setRecipes(formattedRecipes);
-        console.log(formattedRecipes[0].recipeSteps);
       }
     }
   }, []);
@@ -99,6 +101,14 @@ export default function RecipesScreen() {
     }
     const { error } = await supabase.from("recipes").delete().eq("id", id);
     if (!error) fetchItems(); // refresh the list
+  };
+
+  const handleAddRecipeTabPress = () => {
+    if (atRecipeLimit) {
+      Alert.alert("Recipe Limit Reached", "You can only have up to 100 recipes.");
+    } else {
+      setActiveTab('add');
+    }
   };
 
   const filteredRecipes = recipes.filter((recipe) =>
@@ -136,7 +146,7 @@ export default function RecipesScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Recipes</Text>
-          <Text style={styles.headerSubtitle}>Your personal cookbook</Text>
+          <Text style={styles.headerSubtitle}>{recipes.length} / 100 recipes</Text>
         </View>
 
         <View style={styles.tabContainer}>
@@ -149,8 +159,8 @@ export default function RecipesScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'add' && styles.activeTab]}
-            onPress={() => setActiveTab('add')}
+            style={[styles.tab, activeTab === 'add' && styles.activeTab, atRecipeLimit && { opacity: 0.5 }]}
+            onPress={handleAddRecipeTabPress}
           >
             <Text style={[styles.tabText, activeTab === 'add' && styles.activeTabText]}>
               Add New Recipe
@@ -195,7 +205,7 @@ export default function RecipesScreen() {
           <AddRecipe onRecipeCreated={() => {
             fetchItems();
             setActiveTab('view');
-          }} />
+          }} atRecipeLimit={atRecipeLimit} />
         )}
         <RecipeOverviewModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
       </ImageBackground>

@@ -17,8 +17,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import ImagePreviewCard from './ImagePreviewCard';
 import InsertItemModal from './InsertItemModal';
-import { Theme } from 'react-native-paper/lib/typescript/types'; // Import Theme type
-import { theme as appTheme } from '../utils/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 

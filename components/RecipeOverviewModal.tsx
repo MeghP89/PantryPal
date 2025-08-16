@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Modal, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Text, Card, IconButton, Chip, Button } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
 import MissingItemsModal from './MissingItemsModal';
 import { Recipe as UseRecipeType } from '../utils/useRecipe';
+import { supabase } from '../utils/supabase';
 
 
 type Recipe = {
@@ -44,10 +45,41 @@ const Section = ({ title, children }) => {
 export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewModalProps) {
   const [loading, setLoading] = useState(false);
   const [missingItemsModalVisible, setMissingItemsModalVisible] = useState(false);
+  const [shoppingListCount, setShoppingListCount] = useState(0);
+
+  useEffect(() => {
+    if (recipe) {
+      fetchShoppingListCount();
+    }
+  }, [recipe]);
+
+  const fetchShoppingListCount = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) {
+      const { count, error } = await supabase
+        .from("shopping_list")
+        .select('*', { count: 'exact', head: true })
+        .eq("user_id", session.user.id);
+
+      if (error) {
+        console.error("Error fetching shopping list count:", error);
+      } else if (count !== null) {
+        setShoppingListCount(count);
+      }
+    }
+  };
+
+  const atShoppingLimit = shoppingListCount >= 100;
 
   if (!recipe) return null;
 
   const onUseRecipe = () => {
+    if (atShoppingLimit) {
+      Alert.alert("Shopping List Full", "Your shopping list has reached the 100 item limit.");
+      return;
+    }
     if (!recipe) return;
     setMissingItemsModalVisible(true);
   };
@@ -105,7 +137,7 @@ export default function RecipeOverviewModal({ recipe, onClose }: RecipeOverviewM
             </ScrollView>
             <Card.Actions style={styles.actions}>
               <Button onPress={onClose} disabled={loading}>Close</Button>
-              <Button mode="contained" onPress={onUseRecipe} loading={loading} disabled={loading}>
+              <Button mode="contained" onPress={onUseRecipe} loading={loading} disabled={loading || atShoppingLimit}>
                 Use Recipe
               </Button>
             </Card.Actions>

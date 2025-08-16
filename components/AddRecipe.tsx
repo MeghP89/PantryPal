@@ -23,9 +23,10 @@ type InventoryItem = {
 
 type Props = {
   onRecipeCreated: () => void;
+  atRecipeLimit: boolean;
 };
 
-export default function AddRecipe({ onRecipeCreated }: Props) {
+export default function AddRecipe({ onRecipeCreated, atRecipeLimit }: Props) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<InventoryItem[]>([]);
   const [instructions, setInstructions] = useState('');
@@ -82,6 +83,11 @@ export default function AddRecipe({ onRecipeCreated }: Props) {
   };
 
   const createRecipe = async () => {
+    if (atRecipeLimit) {
+      Alert.alert("Recipe Limit Reached", "You cannot add more than 100 recipes.");
+      onRecipeCreated();
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.id) throw new Error("User not found");
     const userId = session.user.id;

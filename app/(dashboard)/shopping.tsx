@@ -95,6 +95,9 @@ export default function ShoppingListScreen() {
     completed: false
   });
   const theme = useTheme();
+  const [inventoryItemCount, setInventoryItemCount] = useState(0);
+  const atShoppingLimit = shoppingItems.length >= 100;
+  const atInventoryLimit = inventoryItemCount >= 100;
   
   // Add item form state
   const [newItem, setNewItem] = useState({
@@ -137,33 +140,62 @@ export default function ShoppingListScreen() {
     }
   }, []);
 
+  const fetchInventoryCount = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) {
+      const { count, error } = await supabase
+        .from("nutritional_items")
+        .select('*', { count: 'exact', head: true })
+        .eq("userid", session.user.id);
+
+      if (error) {
+        console.error("Error fetching inventory count:", error);
+      } else if (count !== null) {
+        setInventoryItemCount(count);
+      }
+    }
+  }, []);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchShoppingItems().then(() => setRefreshing(false));
-  }, [fetchShoppingItems]);
+    fetchInventoryCount();
+  }, [fetchShoppingItems, fetchInventoryCount]);
 
   useFocusEffect(
     useCallback(() => {
       fetchShoppingItems();
-    }, [fetchShoppingItems])
+      fetchInventoryCount();
+    }, [fetchShoppingItems, fetchInventoryCount])
   );
 
   useEffect(() => {
     const subscription = supabase
-      .channel("shopping-channel")
+      .channel("shopping-inventory-channel")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "shopping_list" },
         () => fetchShoppingItems()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "nutritional_items" },
+        () => fetchInventoryCount()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [fetchShoppingItems]);
+  }, [fetchShoppingItems, fetchInventoryCount]);
 
   const addShoppingItem = async () => {
+    if (atShoppingLimit) {
+      alert("Reached 100 shopping items limit");
+      return;
+    }
     if (!newItem.itemName.trim()) return;
 
     const {
@@ -239,6 +271,10 @@ export default function ShoppingListScreen() {
   }
 
   const addToInventory = async (item: ShoppingItem) => {
+    if (atInventoryLimit) {
+      Alert.alert("Inventory Full", "You have reached the maximum of 100 items in your pantry.");
+      return;
+    }
     const imageData = await handleTakePhoto();
     
     if (imageData) {
@@ -381,8 +417,9 @@ export default function ShoppingListScreen() {
           <View style={styles.actionButtons}>
             {item.isCompleted && (
               <TouchableOpacity
-                style={styles.inventoryButton}
+                style={[styles.inventoryButton, atInventoryLimit && { opacity: 0.5 }]}
                 onPress={() => addToInventory(item)}
+                disabled={atInventoryLimit}
               >
                 <IconButton
                   icon="package-variant-closed"
@@ -500,9 +537,13 @@ export default function ShoppingListScreen() {
           
           <TextInput
             label="Estimated Price (optional)"
-            value={newItem.estimatedPrice?.toString() || ''}
+            value={newItem.estimatedPriceRaw || ''}
             onChangeText={(text) =>
-              setNewItem({ ...newItem, estimatedPrice: text ? parseFloat(text) : undefined })
+              setNewItem({ 
+                ...newItem, 
+                estimatedPriceRaw: text,
+                estimatedPrice: text ? parseFloat(text) : undefined  // keep numeric version too
+              })
             }
             style={styles.input}
             mode="outlined"
