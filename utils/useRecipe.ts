@@ -1,8 +1,5 @@
 import { Alert } from 'react-native';
 import { supabase } from './supabase';
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY });
 
 export type Recipe = {
   recipeId: string;
@@ -69,36 +66,13 @@ export const handleUseRecipe = async (recipe: Recipe): Promise<HandleUseRecipeRe
       - The 'itemId' in the output MUST be the original ID from the pantry contents for insufficient items.
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ text: prompt }],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            canCook: { type: Type.BOOLEAN },
-            missingOrInsufficient: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  reason: { type: Type.STRING },
-                  shortfall: { type: Type.STRING, nullable: true } // Added to capture shortfall amount
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const { data, error } = await supabase.functions.invoke('useRecipe', {
+      body: { prompt: prompt },
+    })
 
-    if (!response.text) {
-      throw new Error("AI validation failed to return a response.");
-    }
+    const validationResult = data;
+    console.log(validationResult)
 
-    const validationResult = JSON.parse(response.text);
     console.log("Validation result:", validationResult);
 
     if (validationResult.canCook) {

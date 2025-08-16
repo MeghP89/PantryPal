@@ -1,7 +1,6 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { supabase } from "./supabase";
 
-const ai = new GoogleGenAI({ apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY });
 
 const COMMON_ITEM_PROPERTIES = {
   itemName: { type: Type.STRING },
@@ -126,6 +125,4 @@ export async function extractBatchNutritionalInfoFromLabel(imageBase64: string) 
   }
 
   return Error('Failed to read details');
-
-  return await generateNutritionFromImage({ randomDigit, prompt, responseSchema });
 }

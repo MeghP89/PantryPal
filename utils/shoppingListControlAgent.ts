@@ -1,54 +1,5 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import { supabase } from './supabase'; // Assuming supabase client is exported from here
-
-// Configure the client
-const ai = new GoogleGenAI({apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY});
-
-/**
- * Function declaration for the 'shopping_list_control' tool.
- * This tool enables the AI to perform CRUD operations on the shopping list.
- */
-const shoppingListControlFunctionDeclaration = {
-  name: 'shopping_list_control',
-  description: 'Performs create, update, or delete operations on the shopping list. The required parameters change based on the selected action.',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      action: {
-        type: Type.STRING,
-        enum: ['create', 'update', 'delete'],
-        description: 'The action to perform on the shopping list.',
-      },
-      id: {
-        type: Type.STRING,
-        description: "The unique ID of the shopping list item to update or delete. Required for 'update' and single-item 'delete' actions.",
-      },
-      ids: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING },
-        description: "An array of unique IDs for bulk deletion of shopping list items. Used only with the 'delete' action.",
-      },
-      data: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          description: "A JSON object containing the data for a shopping list item. Required for 'create' and 'update' actions. When updating, only include the fields that need to be changed.",
-          properties: {
-              item_name: { type: Type.STRING, description: "The name of the item. First letter of each word should be uppercase" },
-              quantity: { type: Type.NUMBER, description: "The quantity of the item." },
-              unit: { type: Type.STRING, enum: ['pieces', 'lbs', 'oz', 'cups', 'tbsp', 'tsp', 'gallons', 'liters', 'packages'], description: "The unit of measurement for the item." },
-              category: { type: Type.STRING, enum: ["Produce", "Dairy", "Meat", "Bakery", "Frozen", "Beverages", "Snacks", "Canned Goods", "Condiments", "Grains", "Seasonings", "Misc"], description: "The category of the item. Determine based on item" },
-              priority: { type: Type.STRING, enum: ["low", "medium", "high"], description: "The priority of the item." },
-              notes: { type: Type.STRING, description: "Additional notes about the item." },
-              estimated_price: { type: Type.NUMBER, description: "The estimated price of the item." },
-          }
-        },
-        description: 'Items to be updated or inserted'
-      },
-    },
-    required: ['action'],
-  },
-};
 
 /**
  * Type definition for the parameters of the shoppingListControl function.
@@ -56,7 +7,7 @@ const shoppingListControlFunctionDeclaration = {
 type ShoppingListData = {
   item_name?: string;
   quantity?: number;
-  unit?: 'pieces' | 'lbs' | 'oz' | 'cups' | 'tbsp' | 'tsp' | 'gallons' | 'liters' | 'packages' | 'unit';
+  unit?: 'pieces' | 'lbs' | 'oz' | 'cups' | 'tbsp' | 'tsp' | 'gallons' | 'liters' | 'packages' | 'unit' | 'carton';
   category?: "Produce" | "Dairy" | "Meat" | "Bakery" | "Frozen" | "Beverages" | "Snacks" | "Canned Goods" | "Condiments" | "Grains" | "Seasonings" | "Misc";
   priority?: "low" | "medium" | "high";
   notes?: string;
@@ -130,59 +81,44 @@ let conversationHistory: any[] = [];
 
 export async function processUserMessage(userMessage: string) {
   try {
-    // Add user message to history
     conversationHistory.push({
       role: 'user',
       parts: [{ text: userMessage }]
     });
 
-    // Send request with function declarations and conversation history
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [{
-            text: `You are an intelligent assistant for managing a user's shopping list.
-            Your role is to understand the user's request and use the available tools
-            to perform actions like adding, updating, or deleting items from their shopping list.
-            Be precise and only use the functions when the user's intent is clear.
-            If the user's request is ambiguous, ask for clarification, but be specific in your clarification ask.
-            Always respond in a conversational and helpful manner.`
-          }]
-        },
-        ...conversationHistory
-      ],
-      config: {
-        tools: [{
-          functionDeclarations: [shoppingListControlFunctionDeclaration]
-        }],
-      },
+    const { data, error } = await supabase.functions.invoke("shoppingListControlAgent", {
+      body: { conversationHistory },
     });
+    console.log(data)
 
     let assistantResponse = '';
 
-    // Check for function calls in the response
-    if (response.functionCalls && response.functionCalls.length > 0) {
-      const functionCall = response.functionCalls[0];
-      console.log(`\n🔧 Executing: ${functionCall.name}`);
-      console.log(`📋 Parameters: ${JSON.stringify(functionCall.args, null, 2)}`);
+    if (error) {
+      console.error("Error:", error);
+    } else if (data) {
+      const { purpose } = data;
+      if ( purpose == 'function') {
+        const { functionCall } = data;
+        console.log(`\n🔧 Executing: ${functionCall.name}`);
+        console.log(`📋 Parameters: ${JSON.stringify(functionCall.args, null, 2)}`);
       
-      // Execute the function
-      const result = await shoppingListControl(functionCall.args);
-      
-      if (result.success) {
-        assistantResponse = `✅ Successfully ${functionCall.args.action}d shopping list item(s)!`;
-        if (result.data && result.data.length > 0) {
-          assistantResponse += `\n📝 Details: ${JSON.stringify(result.data, null, 2)}`;
+        // Execute the function
+        const result = await shoppingListControl(functionCall.args);
+        
+        if (result.success) {
+          assistantResponse = `✅ Successfully ${functionCall.args.action}d shopping list item(s)!`;
+          if (result.data && result.data.length > 0) {
+            assistantResponse += `\n📝 Details: ${JSON.stringify(result.data, null, 2)}`;
+          }
+        } else {
+          assistantResponse = `❌ Error: ${result.error}`;
         }
+      } else if ( purpose == 'text' ) {
+        const { resp } = data;
+        assistantResponse = resp.text;
       } else {
-        assistantResponse = `❌ Error: ${result.error}`;
+        assistantResponse = "I'm not sure how to help with that. Could you please rephrase your request?";
       }
-    } else if (response.text) {
-      assistantResponse = response.text;
-    } else {
-      assistantResponse = "I'm not sure how to help with that. Could you please rephrase your request?";
     }
 
     // Add assistant response to history
