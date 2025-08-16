@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { supabase } from "./supabase";
 
 const ai = new GoogleGenAI({ apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY });
 
@@ -31,35 +32,19 @@ const COMMON_ITEM_PROPERTIES = {
 };
 
 async function generateNutritionFromImage({
-  imageBase64,
+  randomDigit,
   prompt,
   responseSchema
 }: {
-  imageBase64: string;
+  randomDigit: number;
   prompt: string;
   responseSchema: any;
 }) {
-  const contents = [
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: imageBase64
-      }
-    },
-    { text: prompt }
-  ];
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema
-    }
+  const { data, error } = await supabase.functions.invoke("generateNutritionFromImage", {
+    body: { randomDigit, prompt, responseSchema },
   });
-
-  if (!response.text) throw new Error("No response text returned from API");
-  return JSON.parse(response.text);
+  console.log(data)
+  return data;
 }
 
 export async function extractNutritionalInfoFromLabel(imageBase64: string) {
@@ -92,8 +77,17 @@ export async function extractNutritionalInfoFromLabel(imageBase64: string) {
     },
     propertyOrdering: ["NutritionalItem"]
   };
+  const randomDigit = Math.floor(Math.random() * 10000000);
+  const { data, error: insertError } = await supabase
+          .from('images')
+          .insert({id: randomDigit, imageBase64: imageBase64})
+          .select();
+  
+  if (data) {
+    return await generateNutritionFromImage({ randomDigit, prompt, responseSchema })
+  }
 
-  return await generateNutritionFromImage({ imageBase64, prompt, responseSchema });
+  return Error('Failed to read details');
 }
 
 export async function extractBatchNutritionalInfoFromLabel(imageBase64: string) {
@@ -121,5 +115,17 @@ export async function extractBatchNutritionalInfoFromLabel(imageBase64: string) 
     }
   };
 
-  return await generateNutritionFromImage({ imageBase64, prompt, responseSchema });
+  const randomDigit = Math.floor(Math.random() * 10000000);
+  const { data, error: insertError } = await supabase
+          .from('images')
+          .insert({id: randomDigit, imageBase64: imageBase64})
+          .select();
+  
+  if (data) {
+    return await generateNutritionFromImage({ randomDigit, prompt, responseSchema })
+  }
+
+  return Error('Failed to read details');
+
+  return await generateNutritionFromImage({ randomDigit, prompt, responseSchema });
 }
