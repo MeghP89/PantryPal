@@ -1,6 +1,6 @@
-# 🍳 PrepPal — Your AI-Powered Smart Kitchen Assistant
+# 🍳 PantryPal — Your AI-Powered Smart Kitchen Assistant
 
-**PrepPal** is a mobile app that helps you manage your pantry, plan meals, and generate recipes based on your current ingredients — all in one streamlined experience. Designed to reduce food waste and make cooking smarter, easier, and more enjoyable.
+**PantryPal** is a mobile app that helps you manage your pantry, plan meals, and generate recipes based on your current ingredients — all in one streamlined experience. Designed to reduce food waste and make cooking smarter, easier, and more enjoyable.
 
 ## 📦 Features
 
@@ -49,5 +49,15 @@
 ### 2. Clone the Repository
 
 ```bash
-https://github.com/MeghP89/PrepPal.git
-cd preppal
+https://github.com/MeghP89/PantryPal.git
+cd pantrypal
+
+### 3. Install required dependencies
+
+'''bash
+npm install
+
+### 4. Start the app
+
+'''bash
+npx expo start --clear
