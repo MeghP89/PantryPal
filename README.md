@@ -51,13 +51,16 @@
 ```bash
 https://github.com/MeghP89/PantryPal.git
 cd pantrypal
+'''
 
 ### 3. Install required dependencies
 
 '''bash
 npm install
+'''
 
 ### 4. Start the app
 
 '''bash
 npx expo start --clear
+'''
