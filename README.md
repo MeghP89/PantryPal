@@ -2,17 +2,6 @@
 
 **PrepPal** is a mobile app that helps you manage your pantry, plan meals, and generate recipes based on your current ingredients — all in one streamlined experience. Designed to reduce food waste and make cooking smarter, easier, and more enjoyable.
 
----
-
-## ✨ App Preview
-
-
-| Login Screen | Pantry / Inventory | Shopping List |
-| :---: | :---: | :---: |
-| ![Login](assets/screenshots/login.jpeg) | ![Pantry](assets/screenshots/pantry.jpeg) | ![Shopping](assets/screenshots/shopping.jpeg) |
-
----
-
 ## 📦 Features
 
 ### 🔐 Authentication
