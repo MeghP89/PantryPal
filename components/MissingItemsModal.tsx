@@ -132,7 +132,8 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
 
     try {
       const response = await controlShoppingList(currentPrompt);
-      
+      console.log(response)
+
       if (response.includes('?')) {
         setAiResponse(response);
         setStep('contextNeeded');
