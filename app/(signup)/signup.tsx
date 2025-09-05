@@ -22,12 +22,12 @@ export default function SignUp() {
       >
         <View style={{ flex: 1 }}>
           <View style={styles.backButtonContainer}>
-            <IconButton
+            {/* <IconButton
               icon="arrow-left"
               iconColor="#F5EFE0"
               size={28}
               onPress={() => router.back()}
-            />
+            /> */}
           </View>
           <KeyboardAvoidingView
             style={{ flex: 1 }}

@@ -6,7 +6,7 @@ import React from 'react';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { theme } from '../../utils/theme'; // Import the custom theme
 
-export default function Layout() {
+export default function DashboardLayout() {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {

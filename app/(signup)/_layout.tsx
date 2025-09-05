@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { ImageBackground, StyleSheet } from 'react-native';
 
-export default function AuthLayout() {
+export default function SignupLayout() {
   return (
     <Stack
       screenOptions={{
@@ -15,6 +15,7 @@ export default function AuthLayout() {
           fontWeight: 'bold',
         },
         headerShadowVisible: false,
+        // headerShown: false, 
       }}
     >
       <Stack.Screen
