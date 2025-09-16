@@ -1,7 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Modal, ScrollView, Dimensions, BackHandler } from 'react-native';
-import { Text, Button, Card, TextInput, List, Chip, Divider, IconButton, Portal, Snackbar, useTheme } from 'react-native-paper';
-import { controlShoppingList } from '../utils/shoppingListControlAgent';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  View, 
+  StyleSheet, 
+  ActivityIndicator, 
+  Modal, 
+  ScrollView, 
+  Dimensions, 
+  BackHandler,
+  Alert 
+} from 'react-native';
+import { 
+  Text, 
+  Button, 
+  Card, 
+  List, 
+  Chip, 
+  Divider, 
+  IconButton, 
+  Portal, 
+  Snackbar, 
+  useTheme 
+} from 'react-native-paper';
+import { supabase } from '../utils/supabase';
 import { handleUseRecipe, Recipe, MissingItem } from '../utils/useRecipe';
 import { theme as appTheme } from '../utils/theme';
 
@@ -11,28 +31,45 @@ interface MissingItemsModalProps {
   recipe: Recipe | null;
 }
 
-type ModalStep = 'loading' | 'initial' | 'contextNeeded' | 'final' | 'readyForUse';
+type ModalStep = 'loading' | 'initial' | 'final' | 'readyForUse';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Constants for better maintainability
+const MODAL_ANIMATION_DURATION = 300;
+const SNACKBAR_DURATION = 3000;
+const MAX_MODAL_WIDTH = 400;
+const MODAL_HEIGHT_RATIO = 0.85;
+
 export default function MissingItemsModal({ visible, onClose, recipe }: MissingItemsModalProps) {
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
+  // State management
   const [step, setStep] = useState<ModalStep>('loading');
   const [missingItems, setMissingItems] = useState<MissingItem[]>([]);
-  const [aiResponse, setAiResponse] = useState('');
-  const [userInput, setUserInput] = useState('');
   const [resultMessage, setResultMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [inputError, setInputError] = useState('');
 
-  // Handle Android back button
+  // Memoized values
+  const modalDimensions = useMemo(() => ({
+    width: Math.min(SCREEN_WIDTH - 40, MAX_MODAL_WIDTH),
+    maxHeight: SCREEN_HEIGHT * MODAL_HEIGHT_RATIO,
+  }), []);
+
+  const hasAllIngredients = useMemo(() => 
+    step === 'readyForUse' && missingItems.length === 0, 
+    [step, missingItems.length]
+  );
+
+  // Handle Android back button with cleanup
   useEffect(() => {
+    if (!visible) return;
+
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (visible && !loading) {
+      if (!loading) {
         handleClose();
         return true;
       }
@@ -40,32 +77,38 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
     });
 
     return () => backHandler.remove();
-  }, [visible, loading]);
+  }, [visible, loading, handleClose]);
 
+  // Main effect for modal visibility changes
   useEffect(() => {
     if (visible && recipe) {
       checkRecipeIngredients();
-    } else {
-      resetState();
+    } else if (!visible) {
+      // Small delay to allow modal animation to complete before resetting
+      const timeoutId = setTimeout(resetState, MODAL_ANIMATION_DURATION);
+      return () => clearTimeout(timeoutId);
     }
   }, [visible, recipe]);
 
   const resetState = useCallback(() => {
     setStep('loading');
     setMissingItems([]);
-    setAiResponse('');
-    setUserInput('');
     setResultMessage('');
     setLoading(false);
-    setInputError('');
     setSnackbarVisible(false);
     setSnackbarMessage('');
   }, []);
 
   const handleClose = useCallback(() => {
-    if (!loading) {
-      onClose();
+    if (loading) {
+      Alert.alert(
+        'Operation in Progress',
+        'Please wait for the current operation to complete before closing.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
     }
+    onClose();
   }, [loading, onClose]);
 
   const showSnackbar = useCallback((message: string) => {
@@ -73,7 +116,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
     setSnackbarVisible(true);
   }, []);
 
-  const checkRecipeIngredients = async () => {
+  const checkRecipeIngredients = useCallback(async () => {
     if (!recipe) {
       setResultMessage('No recipe provided.');
       setStep('final');
@@ -85,18 +128,21 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
     
     try {
       const result = await handleUseRecipe(recipe);
+      
       if (result.success) {
         setResultMessage(`✅ Great! You have all the ingredients for ${recipe.recipeName}!`);
         setStep('readyForUse');
         showSnackbar('All ingredients available!');
-      } else if (result.missingOrInsufficient && result.missingOrInsufficient.length > 0) {
+      } else if (result.missingOrInsufficient?.length > 0) {
         setMissingItems(result.missingOrInsufficient);
         setStep('initial');
       } else {
-        setResultMessage(result.error || '❌ An unknown error occurred while checking ingredients.');
+        const errorMsg = result.error || 'An unknown error occurred while checking ingredients.';
+        setResultMessage(`❌ ${errorMsg}`);
         setStep('final');
       }
     } catch (error) {
+      console.error('Error checking recipe ingredients:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to check ingredients';
       setResultMessage(`❌ Error: ${errorMessage}`);
       setStep('final');
@@ -104,125 +150,215 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
     } finally {
       setLoading(false);
     }
-  };
+  }, [recipe, showSnackbar]);
 
-  const validateInput = (input: string): boolean => {
-    if (!input.trim()) {
-      setInputError('Please provide an answer');
-      return false;
+  const parseQuantityFromShortfall = useCallback((shortfall: string) => {
+    const parts = shortfall.trim().split(' ');
+    const numericPart = parseFloat(parts[0]);
+    
+    if (isNaN(numericPart)) {
+      return { quantity: 1, unit: 'units' };
     }
-    if (input.trim().length < 2) {
-      setInputError('Please provide a more detailed answer');
-      return false;
-    }
-    setInputError('');
-    return true;
-  };
+    
+    return {
+      quantity: numericPart,
+      unit: parts.length > 1 ? parts.slice(1).join(' ') : 'units'
+    };
+  }, []);
 
-  const handleAddToShoppingList = async (prompt?: string) => {
+  const updateExistingShoppingItem = useCallback(async (
+    existingItem: any, 
+    additionalQuantity: number
+  ) => {
+    const { error } = await supabase
+      .from('shopping_list')
+      .update({ quantity: existingItem.quantity + additionalQuantity })
+      .eq('id', existingItem.id);
+    
+    if (error) {
+      console.error('Error updating shopping list item:', error);
+      throw new Error(`Failed to update ${existingItem.item_name}`);
+    }
+  }, []);
+
+  const insertNewShoppingItem = useCallback(async (
+    userId: string,
+    item: MissingItem,
+    quantity: number,
+    unit: string
+  ) => {
+    const newItem = {
+      user_id: userId,
+      item_name: item.name,
+      quantity,
+      unit,
+      category: 'Misc',
+      priority: 'medium',
+      is_completed: false,
+    };
+
+    const { error } = await supabase
+      .from('shopping_list')
+      .insert([newItem]);
+    
+    if (error) {
+      console.error('Error inserting shopping list item:', error);
+      throw new Error(`Failed to add ${item.name}`);
+    }
+  }, []);
+
+  const handleAddToShoppingList = useCallback(async () => {
+    if (missingItems.length === 0) {
+      showSnackbar('No items to add');
+      return;
+    }
+
     setLoading(true);
-    let currentPrompt = prompt;
-
-    if (!currentPrompt) {
-      const itemsString = missingItems
-        .map(item => `${item.name} (${item.reason === 'missing' ? 'missing' : `need ${item.shortfall} more`})`)
-        .join(', ');
-      currentPrompt = `Please add the following items to my shopping list for the recipe "${recipe?.recipeName}" that uses ${recipe?.recipeIngredients} and is missing: ${itemsString}. Use appropriate quantities and units and only add the missing ingredients.`;
-    }
 
     try {
-      const response = await controlShoppingList(currentPrompt);
-      console.log(response)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Please log in to add items to your shopping list");
+      }
 
-      if (response.includes('?')) {
-        setAiResponse(response);
-        setStep('contextNeeded');
+      const errors: string[] = [];
+
+      for (const item of missingItems) {
+        try {
+          const { quantity, unit } = item.shortfall 
+            ? parseQuantityFromShortfall(item.shortfall)
+            : { quantity: 1, unit: 'units' };
+          
+          // Check for existing item (case-insensitive)
+          const { data: existingItem, error: fetchError } = await supabase
+            .from('shopping_list')
+            .select('id, quantity, item_name')
+            .eq('user_id', session.user.id)
+            .ilike('item_name', item.name)
+            .single();
+
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            console.error('Error checking existing item:', fetchError);
+            errors.push(`Failed to check ${item.name}`);
+            continue;
+          }
+
+          if (existingItem) {
+            await updateExistingShoppingItem(existingItem, quantity);
+          } else {
+            await insertNewShoppingItem(session.user.id, item, quantity, unit);
+          }
+        } catch (itemError) {
+          const errorMsg = itemError instanceof Error ? itemError.message : `Failed to process ${item.name}`;
+          errors.push(errorMsg);
+        }
+      }
+
+      if (errors.length > 0) {
+        const errorMessage = errors.length === missingItems.length 
+          ? 'Failed to add all items to shopping list'
+          : `Some items couldn't be added: ${errors.join(', ')}`;
+        
+        setResultMessage(`⚠️ ${errorMessage}`);
+        showSnackbar('Some items failed to add');
       } else {
-        setResultMessage(`✅ ${response}`);
-        setStep('final');
+        setResultMessage('✅ All items successfully added to your shopping list!');
         showSnackbar('Items added to shopping list!');
       }
+
+      setStep('final');
+
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
+      console.error('Shopping list error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       setResultMessage(`❌ Error: ${errorMessage}`);
       setStep('final');
       showSnackbar('Failed to add items to shopping list');
     } finally {
       setLoading(false);
     }
-  };
+  }, [missingItems, parseQuantityFromShortfall, updateExistingShoppingItem, insertNewShoppingItem, showSnackbar]);
 
-  const handleContextSubmit = () => {
-    if (!validateInput(userInput)) {
-      return;
-    }
-
-    const newPrompt = `${aiResponse}\n\nMy answer: ${userInput.trim()}`;
-    setUserInput('');
-    setInputError('');
-    handleAddToShoppingList(newPrompt);
-  };
-
-  const handleGoBack = () => {
-    if (step === 'contextNeeded') {
+  const handleGoBack = useCallback(() => {
+    if (step === 'final' && missingItems.length > 0) {
       setStep('initial');
-      setUserInput('');
-      setInputError('');
-      setAiResponse('');
-    } else if (step === 'final') {
-      if (missingItems.length > 0) {
-        setStep('initial');
-      } else {
-        handleClose();
-      }
       setResultMessage('');
+    } else {
+      handleClose();
     }
-  };
+  }, [step, missingItems.length, handleClose]);
 
-  const renderLoadingState = () => (
+  // Render methods
+  const renderLoadingState = useCallback(() => (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator animating={true} size="large" color={theme.colors.primary} />
+      <ActivityIndicator 
+        animating={true} 
+        size="large" 
+        color={theme.colors.primary}
+        accessibilityLabel="Checking ingredients"
+      />
       <Text style={styles.loadingText}>Checking ingredients...</Text>
     </View>
-  );
+  ), [styles, theme.colors.primary]);
 
-  const renderInitialState = () => (
-    <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+  const renderMissingItemCard = useCallback((item: MissingItem, index: number) => {
+    const isMissing = item.reason === 'missing';
+    const description = isMissing ? 'Not in pantry' : `Need ${item.shortfall} more`;
+    const iconName = isMissing ? 'minus-circle' : 'alert-circle-outline';
+    const iconColor = isMissing ? theme.colors.error : theme.colors.accent;
+
+    return (
+      <Card 
+        key={`${item.name}-${index}`} 
+        style={styles.itemCard} 
+        mode="outlined"
+        accessible={true}
+        accessibilityLabel={`${item.name}, ${description}`}
+      >
+        <List.Item
+          title={item.name}
+          description={description}
+          left={props => (
+            <List.Icon 
+              {...props} 
+              icon={iconName}
+              color={iconColor}
+            />
+          )}
+          titleStyle={styles.itemTitle}
+          descriptionStyle={styles.itemDescription}
+        />
+      </Card>
+    );
+  }, [theme.colors.error, theme.colors.accent, styles]);
+
+  const renderInitialState = useCallback(() => (
+    <ScrollView 
+      style={styles.scrollContainer} 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Missing Ingredients</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          Missing Ingredients
+        </Text>
         <Text style={styles.subtitle}>For {recipe?.recipeName}</Text>
       </View>
       
       <View style={styles.statsContainer}>
-        <Chip icon="alert-circle-outline" style={styles.statsChip}>
-          {missingItems.length} items needed
+        <Chip 
+          icon="alert-circle-outline" 
+          style={styles.statsChip}
+          textStyle={styles.chipText}
+        >
+          {missingItems.length} item{missingItems.length !== 1 ? 's' : ''} needed
         </Chip>
       </View>
 
       <Divider style={styles.divider} />
 
       <View style={styles.itemsContainer}>
-        {missingItems.map((item, index) => (
-          <Card key={index} style={styles.itemCard} mode="outlined">
-            <List.Item
-              title={item.name}
-              description={
-                item.reason === 'missing' 
-                  ? 'Not in pantry' 
-                  : `Need ${item.shortfall} more`
-              }
-              left={props => (
-                <List.Icon 
-                  {...props} 
-                  icon={item.reason === 'missing' ? 'minus-circle' : 'alert-circle-outline'}
-                  color={item.reason === 'missing' ? theme.colors.error : theme.colors.accent}
-                />
-              )}
-              titleStyle={styles.itemTitle}
-              descriptionStyle={styles.itemDescription}
-            />
-          </Card>
-        ))}
+        {missingItems.map(renderMissingItemCard)}
       </View>
 
       <View style={styles.actionsContainer}>
@@ -231,96 +367,34 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
           onPress={handleClose}
           style={styles.secondaryButton}
           disabled={loading}
+          accessibilityLabel="Cancel and close modal"
         >
           Cancel
         </Button>
         <Button 
           mode="contained" 
-          onPress={() => handleAddToShoppingList()} 
+          onPress={handleAddToShoppingList} 
           loading={loading} 
           disabled={loading}
           style={styles.primaryButton}
           icon="cart-plus"
+          accessibilityLabel="Add missing items to shopping list"
         >
           Add to Shopping List
         </Button>
       </View>
     </ScrollView>
-  );
+  ), [styles, recipe, missingItems, loading, handleClose, handleAddToShoppingList, renderMissingItemCard]);
 
-  const renderContextNeededState = () => (
-    <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+  const renderFinalUseState = useCallback(() => (
+    <ScrollView 
+      style={styles.scrollContainer} 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+    >
       <View style={styles.header}>
-        <IconButton 
-          icon="arrow-left" 
-          onPress={handleGoBack} 
-          disabled={loading}
-          style={styles.backButton}
-        />
-        <Text style={styles.title}>Additional Information Needed</Text>
-      </View>
-
-      <Card style={styles.questionCard} mode="outlined">
-        <Card.Content>
-          <Text style={styles.aiQuestion}>{aiResponse}</Text>
-        </Card.Content>
-      </Card>
-
-      <TextInput
-        label="Your Answer"
-        value={userInput}
-        onChangeText={(text) => {
-          setUserInput(text);
-          if (inputError) setInputError('');
-        }}
-        mode="outlined"
-        style={styles.input}
-        disabled={loading}
-        error={!!inputError}
-        multiline
-        numberOfLines={3}
-        placeholder="Please provide the requested information..."
-      />
-      
-      {inputError ? (
-        <Text style={styles.errorText}>{inputError}</Text>
-      ) : null}
-
-      <View style={styles.actionsContainer}>
-        <Button 
-          mode="outlined" 
-          onPress={handleGoBack}
-          style={styles.secondaryButton}
-          disabled={loading}
-        >
-          Back
-        </Button>
-        <Button 
-          mode="contained" 
-          onPress={handleContextSubmit} 
-          loading={loading} 
-          disabled={loading || !userInput.trim()}
-          style={styles.primaryButton}
-          icon="send"
-        >
-          Submit
-        </Button>
-      </View>
-    </ScrollView>
-  );
-
-  const renderFinalUseState = () => (
-    <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        {missingItems.length > 0 && (
-          <IconButton 
-            icon="arrow-left" 
-            onPress={handleGoBack}
-            style={styles.backButton}
-          />
-        )}
-        <Text style={styles.title}>
-          Ready To Use
+        <Text style={styles.title} accessibilityRole="header">
+          Ready To Cook!
         </Text>
       </View>
 
@@ -335,33 +409,40 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
           mode="contained" 
           onPress={handleClose}
           style={styles.primaryButton}
-          icon="check"
+          icon="chef-hat"
+          accessibilityLabel="Start cooking with available ingredients"
         >
-          Use Pantry Items
+          Start Cooking
         </Button>
       </View>
     </ScrollView>
-  );
+  ), [styles, resultMessage, handleClose]);
 
-  const renderFinalState = () => (
-    <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+  const renderFinalState = useCallback(() => (
+    <ScrollView 
+      style={styles.scrollContainer} 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+    >
       <View style={styles.header}>
         {missingItems.length > 0 && (
           <IconButton 
             icon="arrow-left" 
             onPress={handleGoBack}
             style={styles.backButton}
+            accessibilityLabel="Go back to missing items list"
           />
         )}
-        <Text style={styles.title}>
+        <Text style={styles.title} accessibilityRole="header">
           {resultMessage.startsWith('✅') ? 'Success!' : 
-           resultMessage.startsWith('❌') ? 'Error' : 'Complete'}
+           resultMessage.startsWith('❌') ? 'Error' : 
+           resultMessage.startsWith('⚠️') ? 'Partial Success' : 'Complete'}
         </Text>
       </View>
 
       <Card style={styles.resultCard} mode="outlined">
         <Card.Content>
-          <Text style={styles.resultMessage}>Added Items To Grocery List!</Text>
+          <Text style={styles.resultMessage}>{resultMessage}</Text>
         </Card.Content>
       </Card>
 
@@ -372,6 +453,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
             onPress={handleGoBack}
             style={styles.secondaryButton}
             icon="arrow-left"
+            accessibilityLabel="Go back to missing items"
           >
             Back to Items
           </Button>
@@ -381,21 +463,20 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
           onPress={handleClose}
           style={styles.primaryButton}
           icon="check"
+          accessibilityLabel="Close modal"
         >
           Done
         </Button>
       </View>
     </ScrollView>
-  );
+  ), [styles, missingItems.length, resultMessage, handleGoBack, handleClose]);
 
-  const renderContent = () => {
+  const renderContent = useCallback(() => {
     switch (step) {
       case 'loading':
         return renderLoadingState();
       case 'initial':
         return renderInitialState();
-      case 'contextNeeded':
-        return renderContextNeededState();
       case 'final':
         return renderFinalState();
       case 'readyForUse':
@@ -403,7 +484,7 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
       default:
         return null;
     }
-  };
+  }, [step, renderLoadingState, renderInitialState, renderFinalState, renderFinalUseState]);
 
   return (
     <Portal>
@@ -412,9 +493,16 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
         animationType="slide"
         visible={visible}
         onRequestClose={handleClose}
+        statusBarTranslucent={true}
+        accessible={true}
+        accessibilityViewIsModal={true}
       >
         <View style={styles.overlay}>
-          <Card style={styles.modalCard}>
+          <Card 
+            style={[styles.modalCard, modalDimensions]}
+            accessible={true}
+            accessibilityLabel="Missing ingredients modal"
+          >
             {renderContent()}
           </Card>
         </View>
@@ -423,8 +511,12 @@ export default function MissingItemsModal({ visible, onClose, recipe }: MissingI
       <Snackbar
         visible={snackbarVisible}
         onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
+        duration={SNACKBAR_DURATION}
         style={styles.snackbar}
+        action={{
+          label: 'Dismiss',
+          onPress: () => setSnackbarVisible(false),
+        }}
       >
         {snackbarMessage}
       </Snackbar>
@@ -441,14 +533,22 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    width: Math.min(SCREEN_WIDTH - 40, 400),
-    maxHeight: SCREEN_HEIGHT * 0.85,
     borderRadius: theme.roundness,
     elevation: 8,
     backgroundColor: theme.colors.background,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   scrollContainer: {
     maxHeight: SCREEN_HEIGHT * 0.7,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'column',
@@ -457,36 +557,44 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
     paddingBottom: 10,
   },
   backButton: {
-    marginRight: 8,
-    marginLeft: -8,
+    position: 'absolute',
+    left: 8,
+    top: 16,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.colors.text,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     color: theme.colors.secondaryText,
     marginTop: 4,
-    paddingHorizontal: 20,
+    textAlign: 'center',
   },
   loadingContainer: {
     padding: 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: theme.colors.secondaryText,
+    textAlign: 'center',
   },
   statsContainer: {
     paddingHorizontal: 20,
     paddingBottom: 10,
+    alignItems: 'center',
   },
   statsChip: {
-    alignSelf: 'flex-start',
     backgroundColor: theme.colors.surface,
+  },
+  chipText: {
+    fontSize: 12,
   },
   divider: {
     marginHorizontal: 20,
@@ -510,27 +618,6 @@ const createStyles = (theme: typeof appTheme) => StyleSheet.create({
   itemDescription: {
     fontSize: 14,
     color: theme.colors.secondaryText,
-  },
-  questionCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.borderColor,
-  },
-  aiQuestion: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: theme.colors.text,
-  },
-  input: {
-    marginHorizontal: 20,
-    marginBottom: 10,
-  },
-  errorText: {
-    color: theme.colors.error,
-    fontSize: 12,
-    marginHorizontal: 20,
-    marginBottom: 10,
   },
   resultCard: {
     marginHorizontal: 20,
