@@ -2,6 +2,8 @@
 
 **PantryPal** is a cross-platform mobile app designed to streamline pantry management, meal planning, and recipe generation. By leveraging your existing ingredients, it helps reduce food waste, simplifies cooking, and enhances your kitchen experience.
 
+**DEMO** -- https://www.youtube.com/watch?v=-adObvbU_BQ
+
 ## ✨ Features
 
 ### 🔐 Authentication
